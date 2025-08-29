@@ -24,22 +24,21 @@ import warnings
 warnings.simplefilter("ignore", UserWarning)
 warnings.filterwarnings("ignore")
 
-# ========================== CONFIGURATION ==========================
 CONFIG = {
     "data_path": "notebooks/data.csv",
     "test_size": 0.2,
-    "mlflow_tracking_uri": "https://dagshub.com/vikashdas770/YT-Capstone-Project.mlflow",
-    "dagshub_repo_owner": "vikashdas770",
-    "dagshub_repo_name": "YT-Capstone-Project",
+    "mlflow_tracking_uri": "https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow",
+    "dagshub_repo_owner": "rohitkr8527",
+    "dagshub_repo_name": "sentiment-analysis",
     "experiment_name": "Bow vs TfIdf"
 }
 
-# ========================== SETUP MLflow & DAGSHUB ==========================
+#  SETUP MLflow & DAGSHUB 
 mlflow.set_tracking_uri(CONFIG["mlflow_tracking_uri"])
 dagshub.init(repo_owner=CONFIG["dagshub_repo_owner"], repo_name=CONFIG["dagshub_repo_name"], mlflow=True)
 mlflow.set_experiment(CONFIG["experiment_name"])
 
-# ========================== TEXT PREPROCESSING ==========================
+#  TEXT PREPROCESSING 
 def lemmatization(text):
     lemmatizer = WordNetLemmatizer()
     return " ".join([lemmatizer.lemmatize(word) for word in text.split()])
@@ -73,7 +72,7 @@ def normalize_text(df):
         print(f"Error during text normalization: {e}")
         raise
 
-# ========================== LOAD & PREPROCESS DATA ==========================
+#  LOAD & PREPROCESS DATA
 def load_data(file_path):
     try:
         df = pd.read_csv(file_path)
@@ -85,7 +84,7 @@ def load_data(file_path):
         print(f"Error loading data: {e}")
         raise
 
-# ========================== FEATURE ENGINEERING ==========================
+#  FEATURE ENGINEERING
 VECTORIZERS = {
     'BoW': CountVectorizer(),
     'TF-IDF': TfidfVectorizer()
@@ -99,7 +98,7 @@ ALGORITHMS = {
     'GradientBoosting': GradientBoostingClassifier()
 }
 
-# ========================== TRAIN & EVALUATE MODELS ==========================
+#  TRAIN & EVALUATE MODELS
 def train_and_evaluate(df):
     with mlflow.start_run(run_name="All Experiments") as parent_run:
         for algo_name, algorithm in ALGORITHMS.items():
@@ -168,7 +167,7 @@ def log_model_params(algo_name, model):
 
     mlflow.log_params(params_to_log)
 
-# ========================== EXECUTION ==========================
+# EXECUTION 
 if __name__ == "__main__":
     df = load_data(CONFIG["data_path"])
     train_and_evaluate(df)
