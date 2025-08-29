@@ -1,8 +1,8 @@
 -------------------------Setting up project structure---------------------------
 
 1. Create repo, clone it in local
-2. Create a virtual environment named 'atlas' - conda create -n atlas python=3.10
-3. Activate the virtual environment - conda activate atlas
+2. Create a virtual environment (name:venv)
+3. Activate the virtual environment - venv/Scripts/activate
 4. pip install cookiecutter
 5. cookiecutter -c v1 https://github.com/drivendata/cookiecutter-data-science
 6. Rename src.models -> src.model
@@ -12,7 +12,8 @@
 8. Go to: https://dagshub.com/dashboard
 9. Create > New Repo > Connect a repo > (Github) Connect > Select your repo > Connect
 10. Copy experiment tracking url and code snippet. (Also try: Go To MLFlow UI)
-11. pip install dagshub & mlflow
+11. pip install dagshub & mlflow( in my case mlflow<3 since lots of feature of mlflow 3 are 
+    not supported by current dagshub)
 
 12. Run the exp notebooks
 13. git add - commit - push

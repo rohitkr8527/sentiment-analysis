@@ -21,15 +21,12 @@ warnings.filterwarnings("ignore")
 # os.environ["MLFLOW_DISABLE_ARTIFACTS_DOWNLOAD"] = "1"
 
 # Set MLflow Tracking URI & DAGsHub integration
-MLFLOW_TRACKING_URI = "https://dagshub.com/vikashdas770/YT-Capstone-Project.mlflow"
-dagshub.init(repo_owner="vikashdas770", repo_name="YT-Capstone-Project", mlflow=True)
+MLFLOW_TRACKING_URI = "https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow"
+dagshub.init(repo_owner="rohitkr8527", repo_name="sentiment-analysis", mlflow=True)
 mlflow.set_tracking_uri(MLFLOW_TRACKING_URI)
 mlflow.set_experiment("LoR Hyperparameter Tuning")
 
-
-# ==========================
 # Text Preprocessing Functions
-# ==========================
 def preprocess_text(text):
     """Applies multiple text preprocessing steps."""
     lemmatizer = WordNetLemmatizer()
@@ -43,10 +40,7 @@ def preprocess_text(text):
     
     return text.strip()
 
-
-# ==========================
 # Load & Prepare Data
-# ==========================
 def load_and_prepare_data(filepath):
     """Loads, preprocesses, and vectorizes the dataset."""
     df = pd.read_csv(filepath)
@@ -66,9 +60,7 @@ def load_and_prepare_data(filepath):
     return train_test_split(X, y, test_size=0.2, random_state=42), vectorizer
 
 
-# ==========================
 # Train & Log Model
-# ==========================
 def train_and_log_model(X_train, X_test, y_train, y_test, vectorizer):
     """Trains a Logistic Regression model with GridSearch and logs results to MLflow."""
     
@@ -118,10 +110,7 @@ def train_and_log_model(X_train, X_test, y_train, y_test, vectorizer):
         
         print(f"\nBest Params: {best_params} | Best F1 Score: {best_f1:.4f}")
 
-
-# ==========================
 # Main Execution
-# ==========================
 if __name__ == "__main__":
     (X_train, X_test, y_train, y_test), vectorizer = load_and_prepare_data("notebooks/data.csv")
     train_and_log_model(X_train, X_test, y_train, y_test, vectorizer)
