@@ -178,3 +178,4 @@ data/interim/
 data/processed/
 local_s3/
 notebooks/mlruns/
+.dvc/config
