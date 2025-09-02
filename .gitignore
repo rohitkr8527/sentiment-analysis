@@ -174,3 +174,5 @@ local_s3/
 
 models/
 data/
+local_s3/
+notebooks/mlruns/

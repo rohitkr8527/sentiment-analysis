@@ -24,8 +24,13 @@ import warnings
 warnings.simplefilter("ignore", UserWarning)
 warnings.filterwarnings("ignore")
 
+# Download required nltk data
+# import nltk
+# nltk.download('stopwords')
+# nltk.download('wordnet')
+
 CONFIG = {
-    "data_path": "notebooks/data.csv",
+    "data_path": "notebooks/balanced_sentiment_dataset.csv",
     "test_size": 0.2,
     "mlflow_tracking_uri": "https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow",
     "dagshub_repo_owner": "rohitkr8527",
@@ -40,36 +45,59 @@ mlflow.set_experiment(CONFIG["experiment_name"])
 
 #  TEXT PREPROCESSING 
 def lemmatization(text):
+    """Lemmatize the text."""
     lemmatizer = WordNetLemmatizer()
-    return " ".join([lemmatizer.lemmatize(word) for word in text.split()])
+    text = text.split()
+    text = [lemmatizer.lemmatize(word) for word in text]
+    return " ".join(text)
 
 def remove_stop_words(text):
+    """Remove stop words from the text."""
     stop_words = set(stopwords.words("english"))
-    return " ".join([word for word in text.split() if word not in stop_words])
+    text = [word for word in str(text).split() if word not in stop_words]
+    return " ".join(text)
 
 def removing_numbers(text):
-    return ''.join([char for char in text if not char.isdigit()])
+    """Remove numbers from the text."""
+    text = ''.join([char for char in text if not char.isdigit()])
+    return text
 
 def lower_case(text):
-    return text.lower()
+    """Convert text to lower case."""
+    text = text.split()
+    text = [word.lower() for word in text]
+    return " ".join(text)
 
 def removing_punctuations(text):
-    return re.sub(f"[{re.escape(string.punctuation)}]", ' ', text)
+    """Remove punctuations from the text."""
+    text = re.sub(r'[%s]' % re.escape(string.punctuation), ' ', text)
+    text = text.replace('؛', "")
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 def removing_urls(text):
-    return re.sub(r'https?://\S+|www\.\S+', '', text)
+    """Remove URLs from the text."""
+    url_pattern = re.compile(r'https?://\S+|www\.\S+')
+    return url_pattern.sub(r'', text)
+
+def remove_extra_whitespace(text):
+    """Remove extra whitespace."""
+    text = re.sub(r'\s+', ' ', text).strip()
+    return text
 
 def normalize_text(df):
+    """Normalize the text data."""
     try:
-        df['review'] = df['review'].apply(lower_case)
-        df['review'] = df['review'].apply(remove_stop_words)
-        df['review'] = df['review'].apply(removing_numbers)
-        df['review'] = df['review'].apply(removing_punctuations)
-        df['review'] = df['review'].apply(removing_urls)
-        df['review'] = df['review'].apply(lemmatization)
+        df['text'] = df['text'].apply(lower_case)
+        df['text'] = df['text'].apply(removing_urls)
+        df['text'] = df['text'].apply(removing_numbers)
+        df['text'] = df['text'].apply(removing_punctuations)
+        df['text'] = df['text'].apply(remove_stop_words)
+        df['text'] = df['text'].apply(lemmatization)
+        df['text'] = df['text'].apply(remove_extra_whitespace)
         return df
     except Exception as e:
-        print(f"Error during text normalization: {e}")
+        print(f'Error during text normalization: {e}')
         raise
 
 #  LOAD & PREPROCESS DATA
@@ -77,8 +105,6 @@ def load_data(file_path):
     try:
         df = pd.read_csv(file_path)
         df = normalize_text(df)
-        df = df[df['sentiment'].isin(['positive', 'negative'])]
-        df['sentiment'] = df['sentiment'].replace({'negative': 0, 'positive': 1}).infer_objects(copy=False)
         return df
     except Exception as e:
         print(f"Error loading data: {e}")
@@ -86,16 +112,16 @@ def load_data(file_path):
 
 #  FEATURE ENGINEERING
 VECTORIZERS = {
-    'BoW': CountVectorizer(),
-    'TF-IDF': TfidfVectorizer()
+    'BoW': CountVectorizer(max_features=5000),
+    'TF-IDF': TfidfVectorizer(max_features=5000)
 }
 
 ALGORITHMS = {
-    'LogisticRegression': LogisticRegression(),
+    'LogisticRegression': LogisticRegression(max_iter=1000),
     'MultinomialNB': MultinomialNB(),
-    'XGBoost': XGBClassifier(),
-    'RandomForest': RandomForestClassifier(),
-    'GradientBoosting': GradientBoostingClassifier()
+    'XGBoost': XGBClassifier(use_label_encoder=False, eval_metric='logloss'),
+    'RandomForest': RandomForestClassifier(random_state=42),
+    'GradientBoosting': GradientBoostingClassifier(random_state=42)
 }
 
 #  TRAIN & EVALUATE MODELS
@@ -106,7 +132,7 @@ def train_and_evaluate(df):
                 with mlflow.start_run(run_name=f"{algo_name} with {vec_name}", nested=True) as child_run:
                     try:
                         # Feature extraction
-                        X = vectorizer.fit_transform(df['review'])
+                        X = vectorizer.fit_transform(df['text'])
                         y = df['sentiment']
                         X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=CONFIG["test_size"], random_state=42)
 
@@ -135,7 +161,6 @@ def train_and_evaluate(df):
                         mlflow.log_metrics(metrics)
 
                         # Log model
-                        # mlflow.sklearn.log_model(model, "model")
                         input_example = X_test[:5] if not scipy.sparse.issparse(X_test) else X_test[:5].toarray()
                         mlflow.sklearn.log_model(model, "model", input_example=input_example)
 
@@ -155,8 +180,10 @@ def log_model_params(algo_name, model):
     elif algo_name == 'MultinomialNB':
         params_to_log["alpha"] = model.alpha
     elif algo_name == 'XGBoost':
-        params_to_log["n_estimators"] = model.n_estimators
-        params_to_log["learning_rate"] = model.learning_rate
+        # Using get_params for safer access
+        params = model.get_params()
+        params_to_log["n_estimators"] = params.get("n_estimators", None)
+        params_to_log["learning_rate"] = params.get("learning_rate", None)
     elif algo_name == 'RandomForest':
         params_to_log["n_estimators"] = model.n_estimators
         params_to_log["max_depth"] = model.max_depth
