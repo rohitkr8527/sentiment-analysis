@@ -1,8 +1,7 @@
-# feature engineering
 import numpy as np
 import pandas as pd
 import os
-from sklearn.feature_extraction.text import CountVectorizer
+from sklearn.feature_extraction.text import TfidfVectorizer
 import yaml
 from src.logger import logging
 import pickle
@@ -25,6 +24,7 @@ def load_params(params_path: str) -> dict:
         logging.error('Unexpected error: %s', e)
         raise
 
+
 def load_data(file_path: str) -> pd.DataFrame:
     """Load data from a CSV file."""
     try:
@@ -39,33 +39,47 @@ def load_data(file_path: str) -> pd.DataFrame:
         logging.error('Unexpected error occurred while loading the data: %s', e)
         raise
 
-def apply_bow(train_data: pd.DataFrame, test_data: pd.DataFrame, max_features: int) -> tuple:
-    """Apply Count Vectorizer to the data."""
-    try:
-        logging.info("Applying BOW...")
-        vectorizer = CountVectorizer(max_features=max_features)
 
-        X_train = train_data['review'].values
+def apply_tfidf(train_data: pd.DataFrame, test_data: pd.DataFrame, params: dict) -> tuple:
+    """Apply TF-IDF Vectorizer to the data using parameters from YAML."""
+    try:
+        logging.info("Applying TF-IDF...")
+
+        fe_params = params['feature_engineering']
+        max_features = fe_params.get('max_features', None)
+        max_df = fe_params.get('max_df', 1.0)
+        min_df = fe_params.get('min_df', 1)
+        ngram_range = tuple(fe_params.get('ngram_range', (1, 1)))
+
+        vectorizer = TfidfVectorizer(
+            max_features=max_features,
+            max_df=max_df,
+            min_df=min_df,
+            ngram_range=ngram_range
+        )
+
+        X_train = train_data['text'].values
         y_train = train_data['sentiment'].values
-        X_test = test_data['review'].values
+        X_test = test_data['text'].values
         y_test = test_data['sentiment'].values
 
-        X_train_bow = vectorizer.fit_transform(X_train)
-        X_test_bow = vectorizer.transform(X_test)
+        X_train_tfidf = vectorizer.fit_transform(X_train)
+        X_test_tfidf = vectorizer.transform(X_test)
 
-        train_df = pd.DataFrame(X_train_bow.toarray())
+        train_df = pd.DataFrame(X_train_tfidf.toarray())
         train_df['label'] = y_train
 
-        test_df = pd.DataFrame(X_test_bow.toarray())
+        test_df = pd.DataFrame(X_test_tfidf.toarray())
         test_df['label'] = y_test
 
-        pickle.dump(vectorizer, open('models/vectorizer.pkl', 'wb'))
-        logging.info('Bag of Words applied and data transformed')
+        pickle.dump(vectorizer, open('models/tfidf_vectorizer.pkl', 'wb'))
+        logging.info('TF-IDF applied and data transformed')
 
         return train_df, test_df
     except Exception as e:
-        logging.error('Error during Bag of Words transformation: %s', e)
+        logging.error('Error during TF-IDF transformation: %s', e)
         raise
+
 
 def save_data(df: pd.DataFrame, file_path: str) -> None:
     """Save the dataframe to a CSV file."""
@@ -77,22 +91,22 @@ def save_data(df: pd.DataFrame, file_path: str) -> None:
         logging.error('Unexpected error occurred while saving the data: %s', e)
         raise
 
+
 def main():
     try:
         params = load_params('params.yaml')
-        max_features = params['feature_engineering']['max_features']
-        # max_features = 20
 
         train_data = load_data('./data/interim/train_processed.csv')
         test_data = load_data('./data/interim/test_processed.csv')
 
-        train_df, test_df = apply_bow(train_data, test_data, max_features)
+        train_df, test_df = apply_tfidf(train_data, test_data, params)
 
-        save_data(train_df, os.path.join("./data", "processed", "train_bow.csv"))
-        save_data(test_df, os.path.join("./data", "processed", "test_bow.csv"))
+        save_data(train_df, os.path.join("./data", "processed", "train_tfidf.csv"))
+        save_data(test_df, os.path.join("./data", "processed", "test_tfidf.csv"))
     except Exception as e:
         logging.error('Failed to complete the feature engineering process: %s', e)
         print(f"Error: {e}")
+
 
 if __name__ == '__main__':
     main()

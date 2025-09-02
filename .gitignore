@@ -173,6 +173,8 @@ cred.txt
 local_s3/
 
 models/
-data/
+data/raw/
+data/interim/
+data/processed/
 local_s3/
 notebooks/mlruns/

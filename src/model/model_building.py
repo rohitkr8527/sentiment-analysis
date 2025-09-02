@@ -6,6 +6,12 @@ import yaml
 from src.logger import logging
 
 
+def load_params(path='params.yaml'):
+    with open(path, 'r') as file:
+        params = yaml.safe_load(file)
+    return params
+
+
 def load_data(file_path: str) -> pd.DataFrame:
     """Load data from a CSV file."""
     try:
@@ -19,16 +25,24 @@ def load_data(file_path: str) -> pd.DataFrame:
         logging.error('Unexpected error occurred while loading the data: %s', e)
         raise
 
-def train_model(X_train: np.ndarray, y_train: np.ndarray) -> LogisticRegression:
-    """Train the Logistic Regression model."""
+
+def train_model(X_train: np.ndarray, y_train: np.ndarray, params: dict) -> LogisticRegression:
+    """Train the Logistic Regression model using parameters from YAML."""
     try:
-        clf = LogisticRegression(C=1, solver='liblinear', penalty='l1')
+        model_params = params['model_building']
+        clf = LogisticRegression(
+            C=model_params.get('C', 1.0),
+            solver=model_params.get('solver', 'liblinear'),
+            penalty=model_params.get('penalty', 'l2'),
+            l1_ratio=model_params.get('l1_ratio', None)
+        )
         clf.fit(X_train, y_train)
         logging.info('Model training completed')
         return clf
     except Exception as e:
         logging.error('Error during model training: %s', e)
         raise
+
 
 def save_model(model, file_path: str) -> None:
     """Save the trained model to a file."""
@@ -40,19 +54,22 @@ def save_model(model, file_path: str) -> None:
         logging.error('Error occurred while saving the model: %s', e)
         raise
 
+
 def main():
     try:
+        params = load_params()
 
-        train_data = load_data('./data/processed/train_bow.csv')
+        train_data = load_data('./data/processed/train_tfidf.csv')
         X_train = train_data.iloc[:, :-1].values
         y_train = train_data.iloc[:, -1].values
 
-        clf = train_model(X_train, y_train)
-        
+        clf = train_model(X_train, y_train, params)
+
         save_model(clf, 'models/model.pkl')
     except Exception as e:
         logging.error('Failed to complete the model building process: %s', e)
         print(f"Error: {e}")
+
 
 if __name__ == '__main__':
     main()
