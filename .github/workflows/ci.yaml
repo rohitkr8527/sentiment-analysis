@@ -26,6 +26,12 @@ jobs:
       - name: Install dependencies
         run: pip install -r requirements.txt
 
+      - name: Pull DVC data
+        env:
+          AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
+          AZURE_BLOB_CONTAINER_NAME: ${{ secrets.AZURE_BLOB_CONTAINER_NAME }}
+        run: dvc pull
+
       - name: Run DVC pipeline
         env:
           sentiment_analysis: ${{ secrets.sentiment_analysis }}
