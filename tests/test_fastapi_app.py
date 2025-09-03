@@ -1,7 +1,7 @@
 import unittest
-from flask_app.app import app
+from fastapi_app.app import app
 
-class FlaskAppTests(unittest.TestCase):
+class FastAPIAppTests(unittest.TestCase):
 
     @classmethod
     def setUpClass(cls):

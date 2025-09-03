@@ -40,3 +40,18 @@ jobs:
           AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
         run: dvc repro
+
+      - name: Run model tests
+        env:
+          sentiment_analysis: ${{ secrets.sentiment_analysis }}
+        run: python -m unittest discover -s tests -p "test_model*.py"
+
+      - name: Promote model to production
+        if: success()
+        env:
+          sentiment_analysis: ${{ secrets.sentiment_analysis }}
+        run: python scripts/promote_model.py
+
+      - name: Run FastAPI app tests
+        if: success()
+        run: python -m unittest discover -s tests -p "test_fastapi_app*.py"
