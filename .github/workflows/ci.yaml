@@ -28,13 +28,15 @@ jobs:
 
       - name: Pull DVC data
         env:
+          # App code can still use AZURE_BLOB_CONNECTION_STRING
           AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-          AZURE_BLOB_CONTAINER_NAME: ${{ secrets.AZURE_BLOB_CONTAINER_NAME }}
+          # DVC specifically needs this name
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
         run: dvc pull
 
       - name: Run DVC pipeline
         env:
           sentiment_analysis: ${{ secrets.sentiment_analysis }}
           AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-          AZURE_BLOB_CONTAINER_NAME: ${{ secrets.AZURE_BLOB_CONTAINER_NAME }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
         run: dvc repro
