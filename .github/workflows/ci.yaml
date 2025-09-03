@@ -29,39 +29,6 @@ jobs:
       - name: Run DVC pipeline
         env:
           sentiment_analysis: ${{ secrets.sentiment_analysis }}
+          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_STORAGE_CONNECTION_STRING }}
+          AZURE_CONTAINER_NAME: ${{ secrets.AZURE_CONTAINER_NAME }}
         run: dvc repro
-
-      # - name: Run model tests
-      #   env:
-      #     sentiment_analysis: ${{ secrets.sentiment_analysis }}
-      #   run: python -m unittest tests/test_model.py
-
-      # - name: Promote model to production
-      #   if: success()
-      #   env:
-      #     CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
-      #   run: python scripts/promote_model.py
-
-      # - name: Run Flask app tests
-      #   if: success()
-      #   env:
-      #     CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
-      #   run: python -m unittest tests/test_flask_app.py
-
-      # # --- AZURE DOCKER IMAGE BUILD & PUSH ---
-
-      # - name: Login to Azure
-      #   uses: azure/login@v1
-      #   with:
-      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      # - name: Azure Container Registry Login
-      #   run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
-
-      # - name: Build Docker image
-      #   run: |
-      #     docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/capstone-app:latest .
-
-      # - name: Push Docker image to Azure Container Registry
-      #   run: |
-      #     docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/capstone-app:latest
