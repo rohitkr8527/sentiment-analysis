@@ -1,0 +1,67 @@
+name: CI Pipeline
+
+on: push
+
+jobs:
+  project-testing:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v3
+
+      - name: Setup Python
+        uses: actions/setup-python@v2
+        with:
+          python-version: '3.10'
+
+      - name: Cache pip dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.cache/pip
+          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
+          restore-keys: |
+            ${{ runner.os }}-pip-
+
+      - name: Install dependencies
+        run: pip install -r requirements.txt
+
+      - name: Run DVC pipeline
+        env:
+          sentiment_analysis: ${{ secrets.sentiment_analysis }}
+        run: dvc repro
+
+      # - name: Run model tests
+      #   env:
+      #     sentiment_analysis: ${{ secrets.sentiment_analysis }}
+      #   run: python -m unittest tests/test_model.py
+
+      # - name: Promote model to production
+      #   if: success()
+      #   env:
+      #     CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+      #   run: python scripts/promote_model.py
+
+      # - name: Run Flask app tests
+      #   if: success()
+      #   env:
+      #     CAPSTONE_TEST: ${{ secrets.CAPSTONE_TEST }}
+      #   run: python -m unittest tests/test_flask_app.py
+
+      # # --- AZURE DOCKER IMAGE BUILD & PUSH ---
+
+      # - name: Login to Azure
+      #   uses: azure/login@v1
+      #   with:
+      #     creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      # - name: Azure Container Registry Login
+      #   run: az acr login --name ${{ secrets.AZURE_CONTAINER_REGISTRY }}
+
+      # - name: Build Docker image
+      #   run: |
+      #     docker build -t ${{ secrets.AZURE_CONTAINER_REGISTRY }}/capstone-app:latest .
+
+      # - name: Push Docker image to Azure Container Registry
+      #   run: |
+      #     docker push ${{ secrets.AZURE_CONTAINER_REGISTRY }}/capstone-app:latest
