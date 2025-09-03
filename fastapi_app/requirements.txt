@@ -1,8 +1,8 @@
-dagshub==0.4.2
-FastAPI==0.95.2
-mlflow==2.19.0
-mlflow_skinny==2.19.0
+dagshub==0.6.3
+fastapi==0.116.1
+mlflow==2.22.2
+mlflow_skinny==2.22.2
 nltk==3.9.1
-numpy==2.2.1
-pandas==2.2.3
-prometheus_client==0.15.0
+numpy==2.3.2
+pandas==2.3.2
+prometheus_client==0.22.1
