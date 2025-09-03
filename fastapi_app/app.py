@@ -8,6 +8,7 @@ from nltk.corpus import stopwords
 import string
 import re
 import mlflow
+from mlflow.tracking import MlflowClient
 import pickle
 import os
 import pandas as pd
@@ -62,10 +63,10 @@ def normalize_text(text):
     text = lemmatization(text)
     return text
 
-# Setup DagsHub credentials for MLflow tracking
-dagshub_token = os.getenv("CAPSTONE_TEST")
+# Set up DagsHub credentials for MLflow tracking
+dagshub_token = os.getenv("sentiment_analysis")
 if not dagshub_token:
-    raise EnvironmentError("CAPSTONE_TEST environment variable is not set")
+    raise EnvironmentError("sentiment_analysis environment variable is not set")
 
 os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
 os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
@@ -73,29 +74,45 @@ os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
 dagshub_url = "https://dagshub.com"
 repo_owner = "rohitkr8527"
 repo_name = "sentiment-analysis"
+
+# Set up MLflow tracking URI
 mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
 
 # Load MLflow model and vectorizer
 model_name = "my_model"
 
-def get_latest_model_version(model_name):
-    client = mlflow.MlflowClient()
-    latest_version = client.get_latest_versions(model_name, stages=["Production"])
-    if not latest_version:
-        latest_version = client.get_latest_versions(model_name, stages=["None"])
-    return latest_version[0].version if latest_version else None
+def get_latest_model_version(model_name: str):
+    client = MlflowClient()
+
+    # Try to fetch the latest version in Production stage
+    versions = client.get_latest_versions(model_name, stages=["Production"])
+
+    if not versions:
+        # Fall back to the latest version in "None" stage (unregistered stage)
+        versions = client.get_latest_versions(model_name, stages=["None"])
+
+    if not versions:
+        raise ValueError(f"No versions found for model '{model_name}' in any stage.")
+
+    latest_version = versions[0]
+    print(f"Using model version: {latest_version.version} in stage: {latest_version.current_stage}")
+    return latest_version.version
 
 model_version = get_latest_model_version(model_name)
 model_uri = f'models:/{model_name}/{model_version}'
 print(f"Fetching model from: {model_uri}")
 model = mlflow.pyfunc.load_model(model_uri)
-vectorizer = pickle.load(open('models/vectorizer.pkl', 'rb'))
+vectorizer = pickle.load(open('models/tfidf_vectorizer.pkl', 'rb'))
 
 # Initialize FastAPI app
 app = FastAPI()
 
 # Setup Jinja2 templates
-templates = Jinja2Templates(directory="templates")
+
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+TEMPLATES_DIR = os.path.join(BASE_DIR, "templates")
+
+templates = Jinja2Templates(directory=TEMPLATES_DIR)
 
 # Prometheus metrics setup
 registry = CollectorRegistry()
@@ -144,6 +161,3 @@ async def predict(request: Request, text: str = Form(...)):
 @app.get("/metrics")
 async def metrics():
     return HTMLResponse(generate_latest(registry), media_type=CONTENT_TYPE_LATEST)
-
-# To run:
-# uvicorn main:app --host 0.0.0.0 --port 5000 --reload

@@ -42,22 +42,27 @@ def load_model_info(file_path: str) -> dict:
         raise
 
 def register_model(model_name: str, model_info: dict):
-    """Register the model to the MLflow Model Registry."""
+    """Register the model to the MLflow Model Registry and transition its lifecycle."""
     try:
         model_uri = f"runs:/{model_info['run_id']}/{model_info['model_path']}"
         
         # Register the model
         model_version = mlflow.register_model(model_uri, model_name)
-        
-        # Transition the model to "Staging" stage
-        client = mlflow.tracking.MlflowClient()
+
+        logging.debug(f'Model {model_name} version {model_version.version} registered successfully.')
+
+        # Use MlflowClient to transition lifecycle stage
+        client = mlflow.client.MlflowClient()
+
         client.transition_model_version_stage(
             name=model_name,
             version=model_version.version,
-            stage="Staging"
+            stage="Staging",  # You can still use "Staging" as the stage name
+            archive_existing_versions=True
         )
-        
-        logging.debug(f'Model {model_name} version {model_version.version} registered and transitioned to Staging.')
+
+        logging.debug(f'Model {model_name} version {model_version.version} transitioned to Staging.')
+
     except Exception as e:
         logging.error('Error during model registration: %s', e)
         raise
@@ -75,4 +80,3 @@ def main():
 
 if __name__ == '__main__':
     main()
-
