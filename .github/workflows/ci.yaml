@@ -54,4 +54,6 @@ jobs:
 
       - name: Run FastAPI app tests
         if: success()
+        env:
+          sentiment_analysis: ${{ secrets.sentiment_analysis }}
         run: python -m unittest discover -s tests -p "test_fastapi_app*.py"
