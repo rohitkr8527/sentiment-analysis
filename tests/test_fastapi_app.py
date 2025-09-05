@@ -11,7 +11,7 @@ class FastAPIAppTests(unittest.TestCase):
     def test_home_page(self):
         resp = self.client.get("/")
         assert resp.status_code == 200
-        assert "<title>Sentiment Analysis</title>" in resp.text
+        assert "<title>Sentiment Analysis App</title>" in resp.text
 
     def test_predict_page(self):
         resp = self.client.post("/predict", data={"text": "I love this!"})
