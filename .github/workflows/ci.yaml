@@ -3,7 +3,7 @@ name: CI Pipeline
 on: push
 
 jobs:
-  project-testing:
+  ci:
     runs-on: ubuntu-latest
 
     steps:
@@ -55,14 +55,14 @@ jobs:
         env:
           sentiment_analysis: ${{ secrets.sentiment_analysis }}
         run: python -m unittest discover -s tests -p "test_fastapi_app*.py"
-      
+
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
 
       - name: Login to ACR
         run: az acr login --name mymlopsv2
@@ -76,21 +76,3 @@ jobs:
 
       - name: Verify pushed image
         run: az acr repository show-tags --name mymlopsv2 --repository capstone-app --output table
-      
-      - name: Deploy to Azure VM
-        uses: appleboy/ssh-action@v0.1.6
-        with:
-          host: ${{ secrets.VM_IP }}               
-          username: ${{ secrets.VM_USER }}       
-          key: ${{ secrets.VM_SSH_KEY }}         
-          script: |
-            # Pull latest image from ACR
-            sudo docker pull mymlopsv2.azurecr.io/capstone-app:latest
-            # Stop existing container if running
-            sudo docker stop capstone-app || true
-            sudo docker rm capstone-app || true
-            # Run new container
-            sudo docker run -d -p 5000:5000 \
-              -e sentiment_analysis=${{ secrets.sentiment_analysis }} \
-              --name capstone-app \
-              mymlopsv2.azurecr.io/capstone-app:latest
