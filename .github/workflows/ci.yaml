@@ -28,9 +28,7 @@ jobs:
 
       - name: Pull DVC data
         env:
-          # App code can still use AZURE_BLOB_CONNECTION_STRING
           AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-          # DVC specifically needs this name
           AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
         run: dvc pull
 
@@ -64,7 +62,7 @@ jobs:
       - name: Login to Azure
         uses: azure/login@v1
         with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}  # your service principal JSON
+          creds: ${{ secrets.AZURE_CREDENTIALS }}  
 
       - name: Login to ACR
         run: az acr login --name mymlopsv2
@@ -78,3 +76,21 @@ jobs:
 
       - name: Verify pushed image
         run: az acr repository show-tags --name mymlopsv2 --repository capstone-app --output table
+      
+      - name: Deploy to Azure VM
+        uses: appleboy/ssh-action@v0.1.6
+        with:
+          host: ${{ secrets.VM_IP }}               
+          username: ${{ secrets.VM_USER }}       
+          key: ${{ secrets.VM_SSH_KEY }}         
+          script: |
+            # Pull latest image from ACR
+            sudo docker pull mymlopsv2.azurecr.io/capstone-app:latest
+            # Stop existing container if running
+            sudo docker stop capstone-app || true
+            sudo docker rm capstone-app || true
+            # Run new container
+            sudo docker run -d -p 5000:5000 \
+              -e sentiment_analysis=${{ secrets.sentiment_analysis }} \
+              --name capstone-app \
+              mymlopsv2.azurecr.io/capstone-app:latest

@@ -156,7 +156,7 @@ async def predict(request: Request, text: str = Form(...)):
     PREDICTION_COUNT.labels(prediction=str(prediction)).inc()
     REQUEST_LATENCY.labels(endpoint="/predict").observe(time.time() - start_time)
 
-    return templates.TemplateResponse("index.html", {"request": request, "result": prediction})
+    return templates.TemplateResponse("index.html", {"request": request, "result": prediction, "text_input": text})
 
 @app.get("/metrics")
 async def metrics():
