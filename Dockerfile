@@ -2,9 +2,9 @@ FROM python:3.10-slim
 
 WORKDIR /app
 
-COPY flask_app/ /app/
+COPY fastapi_app/ /app/
 
-COPY models/vectorizer.pkl /app/models/vectorizer.pkl
+COPY models/tfidf_vectorizer.pkl /app/models/tfidf_vectorizer.pkl
 
 RUN pip install -r requirements.txt
 
@@ -16,4 +16,4 @@ EXPOSE 5000
 # CMD ["python", "app.py"]  
 
 #Prod
-CMD ["gunicorn", "--bind", "0.0.0.0:5000", "--timeout", "120", "app:app"]
+CMD ["uvicorn", "app:app", "--host", "0.0.0.0", "--port", "5000"]
