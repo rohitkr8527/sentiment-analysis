@@ -1,7 +1,7 @@
 # Sentiment Analysis - End to End ML Model
 
-[![Python](https://img.shields.io/badge/Python-3.8+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-0.104+-green.svg)](https://fastapi.tiangolo.com/)
+[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com/)
 [![MLflow](https://img.shields.io/badge/MLflow-Tracking-orange.svg)](https://mlflow.org/)
 [![DVC](https://img.shields.io/badge/DVC-Data%20Versioning-purple.svg)](https://dvc.org/)
 [![Docker](https://img.shields.io/badge/Docker-Containerized-blue.svg)](https://docker.com/)
@@ -26,15 +26,25 @@ This project implements a **scalable sentiment analysis solution** using multipl
 ![Model Performance Comparison](https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/60370533c9a94cecbbb535e65d070f4c/c24ec26b-be01-4b52-b0df-8175abb69a3f/18f92c25.png)
 
 | Algorithm | Vectorizer | Accuracy | Precision | Recall | F1-Score |
-|-----------|------------|----------|-----------|--------|----------|
-| **Logistic Regression** | **TF-IDF** | **82.5%** | **83.0%** | **81.5%** | **82.2%** |
-| Logistic Regression | Bag of Words | 81.0% | 81.8% | 79.3% | 80.6% |
-| MultinomialNB | TF-IDF | 82.0% | 82.5% | 81.2% | 81.8% |
-| MultinomialNB | Bag of Words | 80.5% | 81.0% | 78.8% | 79.9% |
-| XGBoost | TF-IDF | 81.5% | 82.0% | 81.0% | 81.5% |
-| RandomForest | TF-IDF | 80.0% | 80.5% | 79.0% | 79.7% |
+|---|---|---:|---:|---:|---:|
+| GradientBoosting | TF‑IDF | 0.728  | 0.765  | 0.653  | 0.705  |
+| GradientBoosting | BoW | 0.721  | 0.805  | 0.577  | 0.672  |
+| RandomForest | TF‑IDF | 0.819  | 0.806  | 0.835  | 0.820  |
+| RandomForest | BoW | 0.821  | 0.812  | 0.831 | 0.821  |
+| XGBoost | TF‑IDF | 0.790  | 0.815  | 0.746  | 0.779  |
+| XGBoost | BoW | 0.791  | 0.832  | 0.724  | 0.774  |
+| MultinomialNB | TF‑IDF | 0.786  | 0.774  | 0.803  | 0.788  |
+| MultinomialNB | BoW | 0.743 | 0.717 | 0.798  | 0.755  |
+| LogisticRegression | TF‑IDF | 0.8276  | 0.8318  | 0.8177  | 0.8247  |
+| LogisticRegression | BoW | 0.805  | 0.816  | 0.784  | 0.800  |
 
 ##  Dataset Information
+
+-This dataset combines sentiment-labeled data from four domains:
+    -Movie reviews (e.g., IMDB)(20k samples)
+    -Twitter sentiment (e.g., Sentiment140)(20k samples)
+    -ChatGPT-generated sentiment data(20k samples)
+    -Amazon product reviews(20k samples)
 
 | Metric | Value |
 |--------|--------|
@@ -44,50 +54,50 @@ This project implements a **scalable sentiment analysis solution** using multipl
 | **Vocabulary Size** | 98,143 unique words after preprocessing |
 | **Train-Test Split** | 80%-20% |
 | **Missing Values** | None |
-| **Data Source** | balanced_sentiment_dataset.csv |
 
 ##  Project Architecture
 
 ```mermaid
 graph TB
-    A[Raw Data] --> B[Data Preprocessing]
+    %% Data Flow
+    A[Azure Blob Storage] --> B[Data Ingestion & Preprocessing]
     B --> C[Feature Engineering]
-    C --> D[Model Training]
-    D --> E[Model Evaluation]
-    E --> F[Model Registration]
-    F --> G[FastAPI Deployment]
-    
-    H[MLflow Tracking] --> D
-    H --> E
-    H --> F
-    
-    I[DVC Data Versioning] --> A
-    I --> C
-    
+    C --> D[Model Training & Evaluation]
+    D --> E[Model Registration]
+    E --> F[FastAPI Application]
+    F --> G[Production API]
+    D --> H[DVC Push Metadata]
+    H --> A
+
+    %% Experiment Tracking
+    I[MLflow Tracking] --> D
+    I --> E
+
+    %% CI/CD & Deployment
     J[GitHub Actions CI/CD] --> K[Docker Build]
     K --> L[Azure VM Deployment]
-    
-    G --> M[Production API]
-    M --> N[Prometheus Metrics]
-    
-    subgraph "Experiment Tracking"
-        H
+    L --> F
+
+    %% Subgraphs
+    subgraph Data_Management
+    A
+    H
     end
-    
-    subgraph "Data Management"
-        I
+
+    subgraph Experiment_Tracking
+    I
     end
-    
-    subgraph "Deployment"
-        J
-        K
-        L
+
+    subgraph Deployment
+    J
+    K
+    L
     end
-    
-    subgraph "Production"
-        M
-        N
+
+    subgraph Production
+    G
     end
+
 ```
 
 ##  Project Structure
@@ -147,7 +157,6 @@ sentiment-analysis/
 - **FastAPI**: High-performance web API framework
 - **Docker**: Containerization for reproducible deployments
 - **Azure VM**: Cloud deployment infrastructure
-- **Prometheus**: Monitoring and metrics collection
 
 ### **Development & CI/CD**
 - **GitHub Actions**: Automated testing and deployment
@@ -277,17 +286,20 @@ The DVC pipeline consists of 6 automated stages:
 
 ```mermaid
 graph LR
+    %% Core Pipeline
     A[Data Ingestion] --> B[Data Preprocessing]
     B --> C[Feature Engineering]
-    C --> D[Model Building]
+    C --> D[Model Training]
     D --> E[Model Evaluation]
     E --> F[Model Registration]
-    
+
+    %% Parameters
     G[params.yaml] --> A
     G --> C
     G --> D
-    
-    H[MLflow] --> D
+
+    %% Experiment Tracking
+    H[MLflow Tracking] --> D
     H --> E
     H --> F
 ```
@@ -376,12 +388,6 @@ sudo docker run -p 8000:8000 \
 ```
 
 ##  Monitoring & Metrics
-
-### Prometheus Metrics
-- **Request Count**: Total API requests by endpoint
-- **Request Latency**: Response time distribution
-- **Prediction Count**: Classification results distribution
-- **Model Performance**: Accuracy, precision, recall tracking
 
 ### MLflow Tracking
 - **Experiments**: All model training runs
