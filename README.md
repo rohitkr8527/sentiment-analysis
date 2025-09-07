@@ -23,7 +23,7 @@ This project implements a **scalable sentiment analysis solution** using multipl
 
 ## Model Performance Results
 
-![Model Performance Comparison]("reports/figures/image.png")
+![Model Performance Comparison](reports/figures/image.png)
 
 | Algorithm | Vectorizer | Accuracy | Precision | Recall | F1-Score |
 |---|---|---:|---:|---:|---:|
@@ -40,11 +40,14 @@ This project implements a **scalable sentiment analysis solution** using multipl
 
 ##  Dataset Information
 
--This dataset combines sentiment-labeled data from four domains:
-    -Movie reviews (e.g., IMDB)(20k samples)
-    -Twitter sentiment (e.g., Sentiment140)(20k samples)
-    -ChatGPT-generated sentiment data(20k samples)
-    -Amazon product reviews(20k samples)
+### Dataset Overview
+
+This dataset combines sentiment-labeled data from **four different domains**, each contributing **20,000 samples**:
+
+- **Movie Reviews** (e.g., IMDB)  
+- **Twitter Sentiment** (e.g., Sentiment140)  
+- **ChatGPT-Generated Sentiment Data**  
+-  **Amazon Product Reviews**  
 
 | Metric | Value |
 |--------|--------|
