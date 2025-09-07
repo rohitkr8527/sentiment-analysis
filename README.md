@@ -23,7 +23,7 @@ This project implements a **scalable sentiment analysis solution** using multipl
 
 ## Model Performance Results
 
-![Model Performance Comparison](https://ppl-ai-code-interpreter-files.s3.amazonaws.com/web/direct-files/60370533c9a94cecbbb535e65d070f4c/c24ec26b-be01-4b52-b0df-8175abb69a3f/18f92c25.png)
+![Model Performance Comparison]("reports/figures/image.png")
 
 | Algorithm | Vectorizer | Accuracy | Precision | Recall | F1-Score |
 |---|---|---:|---:|---:|---:|
