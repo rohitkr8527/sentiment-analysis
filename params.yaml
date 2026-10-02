@@ -3,7 +3,7 @@ data_ingestion:
   test_size: 0.2
   random_state: 42
   blob_name: "balanced_sentiment_dataset.csv"
-  local_fallback_path: "notebooks/balanced_sentiment_dataset.csv"
+  local_fallback_path: "data/balanced_sentiment_dataset.csv"
 
 feature_engineering:
   max_features: 10000

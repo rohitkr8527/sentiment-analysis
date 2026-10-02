@@ -50,7 +50,6 @@ def load_local_data(fallback_path: str) -> pd.DataFrame:
     """Load dataset from local filesystem fallback."""
     candidate_paths = [
         fallback_path,
-        "notebooks/balanced_sentiment_dataset.csv",
         "data/balanced_sentiment_dataset.csv",
         "data/raw/train.csv",
     ]
@@ -100,7 +99,7 @@ def main():
         test_size = float(ingestion_params.get("test_size", 0.2))
         random_state = int(ingestion_params.get("random_state", 42))
         blob_name = ingestion_params.get("blob_name", "balanced_sentiment_dataset.csv")
-        fallback_path = ingestion_params.get("local_fallback_path", "notebooks/balanced_sentiment_dataset.csv")
+        fallback_path = ingestion_params.get("local_fallback_path", "data/balanced_sentiment_dataset.csv")
 
         # 1. Try remote Azure Blob Storage first, then fallback to local
         df = load_data_from_blob(blob_name)

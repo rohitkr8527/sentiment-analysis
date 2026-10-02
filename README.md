@@ -124,7 +124,8 @@ sentiment-analysis/
 ├── data/                            # Pipeline data directory (managed by DVC/local)
 │   ├── raw/                         # Ingested train.csv and test.csv
 │   ├── interim/                     # Normalized train_processed.csv and test_processed.csv
-│   └── processed/                   # Processed sparse features and test holdout CSV
+│   ├── processed/                   # Processed sparse features and test holdout CSV
+│   └── balanced_sentiment_dataset.csv # Raw source sentiment dataset
 ├── fastapi_app/                     # Production FastAPI service
 │   ├── core/
 │   │   ├── __init__.py
@@ -150,13 +151,12 @@ sentiment-analysis/
 │   ├── .gitkeep
 │   ├── model.pkl                    # Trained Logistic Regression classifier
 │   └── tfidf_vectorizer.pkl         # Fitted TF-IDF Vectorizer
-├── notebooks/                       # Research and exploratory data analysis
-│   ├── balanced_sentiment_dataset.csv
-│   ├── exp1.ipynb
-│   ├── exp2_bow_vs_tfidf.py
-│   ├── exp3_lr_with_diff_vectorizer.py
-│   ├── exp4_lr_tfidf_hp.py
-│   └── exp5.py
+├── notebooks/                       # Research and exploratory Jupyter notebooks
+│   ├── exp1.ipynb                   # Baseline EDA and Logistic Regression
+│   ├── exp2_bow_vs_tfidf.ipynb      # Bag-of-Words vs TF-IDF comparison
+│   ├── exp3_lr_with_diff_vectorizer.ipynb # Embeddings vs TF-IDF
+│   ├── exp4_lr_tfidf_hp.ipynb       # Classifier hyperparameter tuning
+│   └── exp5.ipynb                   # TF-IDF parameter tuning pipeline
 ├── reports/                         # Training metrics and figures
 │   ├── figures/
 │   │   └── image.png                # Model comparison benchmark plot
