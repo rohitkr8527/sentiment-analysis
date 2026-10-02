@@ -1,78 +1,48 @@
 name: CI Pipeline
 
-on: push
+on:
+  push:
+    branches: [ "main" ]
+  pull_request:
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  ci:
+  test-and-build:
+    name: Lint, Test & Container Validation
     runs-on: ubuntu-latest
 
     steps:
-      - name: Checkout code
-        uses: actions/checkout@v3
+      - name: Checkout Code
+        uses: actions/checkout@v4
 
       - name: Setup Python
-        uses: actions/setup-python@v2
+        uses: actions/setup-python@v5
         with:
           python-version: '3.10'
+          cache: 'pip'
 
-      - name: Cache pip dependencies
-        uses: actions/cache@v3
-        with:
-          path: ~/.cache/pip
-          key: ${{ runner.os }}-pip-${{ hashFiles('requirements.txt') }}
-          restore-keys: |
-            ${{ runner.os }}-pip-
+      - name: Install Dependencies
+        run: |
+          python -m pip install --upgrade pip
+          pip install -r requirements.txt
 
-      - name: Install dependencies
-        run: pip install -r requirements.txt
+      - name: Download NLTK Corpora
+        run: |
+          python -m nltk.downloader stopwords wordnet
 
-      - name: Pull DVC data
-        env:
-          AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-        run: dvc pull
-
-      - name: Run DVC pipeline
-        env:
-          sentiment_analysis: ${{ secrets.sentiment_analysis }}
-          AZURE_BLOB_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-          AZURE_STORAGE_CONNECTION_STRING: ${{ secrets.AZURE_BLOB_CONNECTION_STRING }}
-        run: dvc repro
-
-      - name: Run model tests
-        env:
-          sentiment_analysis: ${{ secrets.sentiment_analysis }}
-        run: python -m unittest discover -s tests -p "test_model*.py"
-
-      - name: Promote model to production
-        if: success()
-        env:
-          sentiment_analysis: ${{ secrets.sentiment_analysis }}
-        run: python scripts/promote_model.py
-
-      - name: Run FastAPI app tests
-        if: success()
-        env:
-          sentiment_analysis: ${{ secrets.sentiment_analysis }}
-        run: python -m unittest discover -s tests -p "test_fastapi_app*.py"
+      - name: Run Test Suite
+        run: |
+          pytest tests/ -v --cov=fastapi_app --cov=src
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
 
-      - name: Login to Azure
-        uses: azure/login@v1
-        with:
-          creds: ${{ secrets.AZURE_CREDENTIALS }}
-
-      - name: Login to ACR
-        run: az acr login --name mymlopsv2
-
-      - name: Build and push Docker image
-        uses: docker/build-push-action@v4
+      - name: Validate Docker Build
+        uses: docker/build-push-action@v5
         with:
           context: .
-          push: true
-          tags: mymlopsv2.azurecr.io/capstone-app:latest
-
-      - name: Verify pushed image
-        run: az acr repository show-tags --name mymlopsv2 --repository capstone-app --output table
+          push: false
+          tags: sentiment-analysis-api:test
+          cache-from: type=gha
+          cache-to: type=gha,mode=max

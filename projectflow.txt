@@ -1,170 +1,127 @@
-------------------------- Setting up Project Structure -------------------------
+================================================================================
+Sentiment Analysis MLOps & Production Azure Deployment Workflow
+================================================================================
 
-1. Create a GitHub repo and clone it locally:
-   git clone <repo-url>
-   cd <repo-name>
+------------------------- 1. Local Environment Setup -------------------------
 
-2. Create a virtual environment:
-   python -m venv venv
+1. Clone repository:
+   git clone https://github.com/rohitkr8527/sentiment-analysis.git
+   cd sentiment-analysis
 
-3. Activate the virtual environment:
+2. Create and activate Python virtual environment:
    # Windows:
-   venv\Scripts\activate
+   python -m venv .venv
+   .\.venv\Scripts\activate
    # Linux/macOS:
-   source venv/bin/activate
+   source .venv/bin/activate
 
-4. Install cookiecutter:
-   pip install cookiecutter
+3. Install project dependencies:
+   python -m pip install --upgrade pip
+   pip install -r requirements.txt
 
-5. Setup project structure using cookiecutter:
-   cookiecutter -c v1 https://github.com/drivendata/cookiecutter-data-science
+4. Configure local environment variables:
+   cp .env.example .env
 
-6. Rename src.models → src.model
+------------------------- 2. MLOps Data & Pipeline (DVC) -------------------------
 
-7. Initial commit:
-   git add .
-   git commit -m "Initial project structure"
-   git push
+5. Ingest and split dataset:
+   python -m src.data.data_ingestion
 
-------------------------- Setup MLFlow on DagsHub -------------------------
+6. Preprocess text data (URL removal, punctuation, stopwords, lemmatization):
+   python -m src.data.data_preprocessing
 
-8. Go to: https://dagshub.com/dashboard
-9. Create > New Repo > Connect GitHub repo
-10. Copy experiment tracking URL and code snippet (Go to MLFlow UI)
+7. Run feature engineering (TF-IDF vectorizer + sparse matrices):
+   python -m src.features.feature_engineering
 
-11. Install MLFlow and DagsHub SDK:
-    pip install "mlflow<3" dagshub
+8. Train Logistic Regression model:
+   python -m src.model.model_building
 
-12. Run experiment notebooks to log experiments
-13. git add - commit - push
+9. Evaluate model performance and metrics:
+   python -m src.model.model_evaluation
 
-------------------------- DVC Setup with Azure Blob Storage -------------------------
-
-14. Initialize DVC:
-    dvc init
-
-15. Create a local folder for temporary storage:
-    mkdir local_blob
-
-16. Add local DVC remote:
-    dvc remote add -d mylocal local_blob
-
-17. Add code to src directory:
-    - logger.py
-    - data_ingestion.py
-    - data_preprocessing.py
-    - feature_engineering.py
-    - model_building.py
-    - model_evaluation.py
-    - register_model.py
-
-18. Add pipeline files:
-    - params.yaml
-    - dvc.yaml (up to model evaluation metrics)
-
-19. Run DVC pipeline:
+10. (Optional) Run entire DVC pipeline:
     dvc repro
     dvc status
 
-20. git add - commit - push
+------------------------- 3. Automated Testing -------------------------
 
-21. Setup Azure Blob Storage as DVC remote:
-    pip install dvc[azure] azure-cli
+11. Run pytest test suite:
+    pytest tests/ -v
+
+12. Run with code coverage:
+    pytest tests/ -v --cov=fastapi_app --cov=src
+
+------------------------- 4. Running Application Locally -------------------------
+
+13. Start FastAPI application:
+    uvicorn fastapi_app.app:app --host 0.0.0.0 --port 8000 --reload
+
+14. Access endpoints:
+    - Web UI: http://localhost:8000/
+    - Interactive Swagger Docs: http://localhost:8000/docs
+    - Health Check: http://localhost:8000/health
+    - Prometheus Metrics: http://localhost:8000/metrics
+
+15. Run via Docker Compose:
+    docker compose up --build -d
+    docker compose ps
+    docker compose logs -f
+
+------------------------- 5. Azure Production Cloud Deployment -------------------------
+
+16. Authenticate with Azure CLI:
     az login
-    dvc remote add -d myremote azure://<container-name>
+    az account set --subscription "<SUBSCRIPTION_ID>"
 
-------------------------- FastAPI App Setup -------------------------
+17. Create Resource Group:
+    az group create --name rg-sentiment-prod --location eastus
 
-22. Create FastAPI app directory:
-    fastapi_app/
-       ├─ main.py
-       ├─ routes/
-       ├─ services/
-       ├─ utils/
+18. Create Azure Container Registry (ACR):
+    az acr create --resource-group rg-sentiment-prod --name <UNIQUE_ACR_NAME> --sku Basic --admin-enabled true
 
-23. Install FastAPI and Uvicorn:
-    pip install fastapi uvicorn
+19. Build & Push Docker image using ACR Cloud Build:
+    az acr build --registry <UNIQUE_ACR_NAME> --image sentiment-analysis-api:latest .
 
-24. Run FastAPI app locally:
-    uvicorn main:app --reload
+20. Create App Service Plan (Linux Basic B1):
+    az appservice plan create --name plan-sentiment-prod --resource-group rg-sentiment-prod --sku B1 --is-linux
 
-25. Push DVC-tracked data to Azure:
-    dvc push
+21. Create Azure Web App for Containers:
+    az webapp create \
+      --resource-group rg-sentiment-prod \
+      --plan plan-sentiment-prod \
+      --name <UNIQUE_APP_NAME> \
+      --deployment-container-image-name "<UNIQUE_ACR_NAME>.azurecr.io/sentiment-analysis-api:latest"
 
-26. Freeze dependencies:
-    pip freeze > requirements.txt
+22. Configure App Settings and Health Probes:
+    az webapp config appsettings set \
+      --name <UNIQUE_APP_NAME> \
+      --resource-group rg-sentiment-prod \
+      --settings WEBSITES_PORT=8000 PORT=8000 ENVIRONMENT=production LOG_LEVEL=INFO
 
-------------------------- CI/CD Setup -------------------------
+    az webapp config set \
+      --name <UNIQUE_APP_NAME> \
+      --resource-group rg-sentiment-prod \
+      --generic-configurations '{"healthCheckPath": "/health"}'
 
-27. Create GitHub Actions workflow:
-    .github/workflows/ci.yaml
+23. Verify Deployment:
+    curl https://<UNIQUE_APP_NAME>.azurewebsites.net/health
 
-28. Add DagsHub token and Azure credentials to GitHub secrets
+------------------------- 6. CI/CD Setup with GitHub Actions -------------------------
 
-29. Add tests and scripts:
-    - tests/  (unit and integration tests)
-    - scripts/  (automation scripts for CI/CD)
+24. Generate Azure Service Principal credentials:
+    az ad sp create-for-rbac \
+      --name "sp-sentiment-github" \
+      --role contributor \
+      --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/rg-sentiment-prod \
+      --sdk-auth
 
-------------------------- Docker Setup -------------------------
+25. Configure GitHub Repository Secrets:
+    - AZURE_CREDENTIALS: JSON output from step 24
+    - AZURE_ACR_NAME: <UNIQUE_ACR_NAME>
+    - AZURE_APP_NAME: <UNIQUE_APP_NAME>
+    - AZURE_APP_URL: https://<UNIQUE_APP_NAME>.azurewebsites.net
+    - Optional: DAGSHUB_TOKEN, AZURE_STORAGE_CONNECTION_STRING
 
-30. Generate requirements for Docker:
-    pip install pipreqs
-    cd fastapi_app
-    pipreqs . --force
-
-31. Add Dockerfile
-    - Use environment variables for secrets (DagsHub token, Azure storage keys)
-
-32. Build Docker image:
-    docker build -t capstone-app:latest .
-
-33. Run Docker image:
-    docker run -p 8888:8000 -e CAPSTONE_TOKEN=<token> capstone-app:latest
-
-34. Optional:
-    - Push Docker image to Azure Container Registry (ACR)
-    - Pull and run image from ACR on any machine
-
-------------------------- Azure Deployment -------------------------
-
-35. Create Azure Resource Group:
-    az group create --name capstone-rg --location eastus
-
-36. Create Azure Virtual Machine for hosting the FastAPI app:
-    - Size: Standard_B1s or as required
-    - OS: Ubuntu 22.04
-    - Allow inbound ports: 22 (SSH), 8000 (FastAPI)
-
-37. SSH into VM:
-    ssh <username>@<public-ip>
-
-38. Install Docker and run your Docker image:
-    sudo apt update && sudo apt install docker.io -y
-    sudo systemctl start docker
-    sudo docker run -p 8000:8000 -e CAPSTONE_TOKEN=<token> <image>
-
-39. Verify app is running on VM:
-    http://<public-ip>:8000
-
-------------------------- Cleanup -------------------------
-
-40. Stop and remove Docker container:
-    sudo docker stop <container-id>
-    sudo docker rm <container-id>
-
-41. Delete Azure VM:
-    az vm delete --resource-group capstone-rg --name <vm-name> --yes
-
-42. Delete Azure Resource Group (removes all resources including storage):
-    az group delete --name capstone-rg --yes --no-wait
-
-------------------------- Notes -------------------------
-
-- Replace all secrets with environment variables or GitHub secrets
-- Use Azure Blob Storage for DVC remote storage
-- Use Azure Virtual Machine instead of EC2
-- Use Azure Container Registry (ACR) instead of ECR
-- FastAPI replaces Flask
-- MLFlow + DagsHub tracks experiments
-- Docker container can run locally or on Azure VM
-- CI/CD automates build, test, and deployment steps
+26. On every push to main:
+    - CI runs tests, linting, and Docker container verification
+    - CD builds and pushes container to ACR, updates Azure App Service with zero downtime

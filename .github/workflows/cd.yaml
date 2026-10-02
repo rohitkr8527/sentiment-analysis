@@ -1,31 +1,60 @@
-name: CD Pipeline
+name: CD Pipeline - Deploy to Azure
 
 on:
   workflow_run:
     workflows: ["CI Pipeline"]
     types:
       - completed
+    branches: [ "main" ]
+  workflow_dispatch:
 
 jobs:
-  deploy:
-    if: ${{ github.event.workflow_run.conclusion == 'success' }}
+  deploy-to-azure:
+    name: Build, Push to ACR & Deploy
+    if: ${{ github.event_name == 'workflow_dispatch' || github.event.workflow_run.conclusion == 'success' }}
     runs-on: ubuntu-latest
 
     steps:
-      - name: Deploy to Azure VM
-        uses: appleboy/ssh-action@v0.1.6
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Authenticate with Azure
+        uses: azure/login@v2
         with:
-          host: ${{ secrets.VM_IP }}
-          username: ${{ secrets.VM_USER }}
-          key: ${{ secrets.VM_SSH_KEY }}
-          script: |
-            # Pull latest image from ACR
-            sudo docker pull mymlopsv2.azurecr.io/capstone-app:latest
-            # Stop existing container if running
-            sudo docker stop capstone-app || true
-            sudo docker rm capstone-app || true
-            # Run new container
-            sudo docker run -d -p 5000:5000 \
-              -e sentiment_analysis=${{ secrets.sentiment_analysis }} \
-              --name capstone-app \
-              mymlopsv2.azurecr.io/capstone-app:latest
+          creds: ${{ secrets.AZURE_CREDENTIALS }}
+
+      - name: Login to Azure Container Registry (ACR)
+        run: |
+          az acr login --name ${{ secrets.AZURE_ACR_NAME }}
+
+      - name: Build and Push Image to ACR
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: |
+            ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/sentiment-analysis-api:latest
+            ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/sentiment-analysis-api:${{ github.sha }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+      - name: Deploy to Azure App Service for Containers
+        uses: azure/webapps-deploy@v3
+        with:
+          app-name: ${{ secrets.AZURE_APP_NAME }}
+          images: ${{ secrets.AZURE_ACR_NAME }}.azurecr.io/sentiment-analysis-api:latest
+
+      - name: Verify Health Check Probe
+        env:
+          APP_URL: ${{ secrets.AZURE_APP_URL }}
+        run: |
+          if [ -n "$APP_URL" ]; then
+            echo "Checking deployment health probe at $APP_URL/health..."
+            curl --fail --retry 5 --retry-delay 10 --max-time 15 "$APP_URL/health" || exit 1
+            echo "Deployment healthy!"
+          else
+            echo "AZURE_APP_URL secret not set; skipping live health probe check."
+          fi

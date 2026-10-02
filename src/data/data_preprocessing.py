@@ -1,81 +1,62 @@
-# data preprocessing
-
-import numpy as np
-import pandas as pd
 import os
-import re
-import nltk
-import string
-from nltk.corpus import stopwords
-from nltk.stem import WordNetLemmatizer
-from src.logger import logging
-nltk.download('wordnet')
-nltk.download('stopwords')
+import pandas as pd
 
-def preprocess_dataframe(df, col='text'):
+from src.logger import get_logger
+from src.utils.text_preprocessing import normalize_text, ensure_nltk_resources
+
+logger = get_logger(__name__)
+
+
+def preprocess_dataframe(df: pd.DataFrame, col: str = "text") -> pd.DataFrame:
     """
-    Preprocess a DataFrame by applying text preprocessing to a specific column.
-
-    Args:
-        df (pd.DataFrame): The DataFrame to preprocess.
-        col (str): The name of the column containing text.
-
-    Returns:
-        pd.DataFrame: The preprocessed DataFrame.
+    Applies text normalization to the specified column and drops empty rows.
     """
-    # Initialize lemmatizer and stopwords
-    lemmatizer = WordNetLemmatizer()
-    stop_words = set(stopwords.words("english"))
+    ensure_nltk_resources()
+    logger.info("Applying text normalization across %d records...", len(df))
 
-    def preprocess_text(text):
-        """Helper function to preprocess a single text string."""
-        # Remove URLs
-        text = re.sub(r'https?://\S+|www\.\S+', '', text)
-        # Remove numbers
-        text = ''.join([char for char in text if not char.isdigit()])
-        # Convert to lowercase
-        text = text.lower()
-        # Remove punctuations
-        text = re.sub('[%s]' % re.escape(string.punctuation), ' ', text)
-        text = text.replace('؛', "")
-        text = re.sub(r'\s+', ' ', text).strip()
-        # Remove stop words
-        text = " ".join([word for word in text.split() if word not in stop_words])
-        # Lemmatization
-        text = " ".join([lemmatizer.lemmatize(word) for word in text.split()])
-        return text
+    cleaned_df = df.copy()
+    cleaned_df[col] = cleaned_df[col].astype(str).apply(normalize_text)
 
-    # Apply preprocessing to the specified column
-    df[col] = df[col].apply(preprocess_text)
-
-    # Drop rows with NaN values
-    df = df.dropna(subset=[col])
-    logging.info("Data pre-processing completed")
-    return df
+    # Drop rows that became empty after normalization
+    cleaned_df = cleaned_df[cleaned_df[col].str.strip() != ""]
+    cleaned_df = cleaned_df.dropna(subset=[col, "sentiment"])
+    logger.info("Preprocessing complete. Retained %d records.", len(cleaned_df))
+    return cleaned_df
 
 
 def main():
     try:
-        # Fetch the data from data/raw
-        train_data = pd.read_csv('./data/raw/train.csv')
-        test_data = pd.read_csv('./data/raw/test.csv')
-        logging.info('data loaded properly')
+        raw_dir = os.path.join("data", "raw")
+        interim_dir = os.path.join("data", "interim")
+        os.makedirs(interim_dir, exist_ok=True)
 
-        # Transform the data
-        train_processed_data = preprocess_dataframe(train_data, 'text')
-        test_processed_data = preprocess_dataframe(test_data, 'text')
+        train_path = os.path.join(raw_dir, "train.csv")
+        test_path = os.path.join(raw_dir, "test.csv")
 
-        # Store the data inside data/processed
-        data_path = os.path.join("./data", "interim")
-        os.makedirs(data_path, exist_ok=True)
-        
-        train_processed_data.to_csv(os.path.join(data_path, "train_processed.csv"), index=False)
-        test_processed_data.to_csv(os.path.join(data_path, "test_processed.csv"), index=False)
-        
-        logging.info('Processed data saved to %s', data_path)
+        if not os.path.exists(train_path) or not os.path.exists(test_path):
+            raise FileNotFoundError(
+                f"Raw data files not found in {raw_dir}. Run data ingestion stage first."
+            )
+
+        logger.info("Reading raw datasets...")
+        train_df = pd.read_csv(train_path)
+        test_df = pd.read_csv(test_path)
+
+        train_processed = preprocess_dataframe(train_df, col="text")
+        test_processed = preprocess_dataframe(test_df, col="text")
+
+        train_out_path = os.path.join(interim_dir, "train_processed.csv")
+        test_out_path = os.path.join(interim_dir, "test_processed.csv")
+
+        train_processed.to_csv(train_out_path, index=False)
+        test_processed.to_csv(test_out_path, index=False)
+
+        logger.info("Processed datasets successfully saved to %s", interim_dir)
+
     except Exception as e:
-        logging.error('Failed to complete the data transformation process: %s', e)
-        print(f"Error: {e}")
+        logger.error("Data preprocessing stage failed: %s", e, exc_info=True)
+        raise
 
-if __name__ == '__main__':
+
+if __name__ == "__main__":
     main()

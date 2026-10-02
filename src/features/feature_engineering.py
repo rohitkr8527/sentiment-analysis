@@ -1,112 +1,153 @@
+import os
+import pickle
+from typing import Dict, Any, Tuple
 import numpy as np
 import pandas as pd
-import os
+import scipy.sparse as sp
 from sklearn.feature_extraction.text import TfidfVectorizer
 import yaml
-from src.logger import logging
-import pickle
+
+from src.logger import get_logger
+
+logger = get_logger(__name__)
 
 
-def load_params(params_path: str) -> dict:
-    """Load parameters from a YAML file."""
+def load_params(params_path: str = "params.yaml") -> Dict[str, Any]:
+    """Load configuration parameters from YAML file."""
     try:
-        with open(params_path, 'r') as file:
+        with open(params_path, "r", encoding="utf-8") as file:
             params = yaml.safe_load(file)
-        logging.debug('Parameters retrieved from %s', params_path)
-        return params
-    except FileNotFoundError:
-        logging.error('File not found: %s', params_path)
-        raise
-    except yaml.YAMLError as e:
-        logging.error('YAML error: %s', e)
-        raise
+        return params or {}
     except Exception as e:
-        logging.error('Unexpected error: %s', e)
+        logger.error("Failed to load parameters from %s: %s", params_path, e)
         raise
 
 
 def load_data(file_path: str) -> pd.DataFrame:
-    """Load data from a CSV file."""
-    try:
-        df = pd.read_csv(file_path)
-        df.fillna('', inplace=True)
-        logging.info('Data loaded and NaNs filled from %s', file_path)
-        return df
-    except pd.errors.ParserError as e:
-        logging.error('Failed to parse the CSV file: %s', e)
-        raise
-    except Exception as e:
-        logging.error('Unexpected error occurred while loading the data: %s', e)
-        raise
+    """Load and sanitize data from CSV file."""
+    if not os.path.exists(file_path):
+        raise FileNotFoundError(f"Input file not found: {file_path}")
+
+    df = pd.read_csv(file_path)
+    df["text"] = df["text"].fillna("")
+    return df
 
 
-def apply_tfidf(train_data: pd.DataFrame, test_data: pd.DataFrame, params: dict) -> tuple:
-    """Apply TF-IDF Vectorizer to the data using parameters from YAML."""
-    try:
-        logging.info("Applying TF-IDF...")
+def apply_tfidf(
+    train_data: pd.DataFrame,
+    test_data: pd.DataFrame,
+    params: Dict[str, Any],
+    vectorizer_path: str = "models/tfidf_vectorizer.pkl"
+) -> Tuple[sp.csr_matrix, np.ndarray, sp.csr_matrix, np.ndarray, TfidfVectorizer]:
+    """
+    Fits TF-IDF vectorizer on training text and transforms both train and test sets.
+    Returns sparse matrices and label arrays for high performance and low memory consumption.
+    """
+    fe_params = params.get("feature_engineering", {})
+    max_features = fe_params.get("max_features", 10000)
+    max_df = float(fe_params.get("max_df", 0.9))
+    min_df = int(fe_params.get("min_df", 5))
+    ngram_range = tuple(fe_params.get("ngram_range", [1, 2]))
 
-        fe_params = params['feature_engineering']
-        max_features = fe_params.get('max_features', None)
-        max_df = fe_params.get('max_df', 1.0)
-        min_df = fe_params.get('min_df', 1)
-        ngram_range = tuple(fe_params.get('ngram_range', (1, 1)))
+    logger.info(
+        "Configuring TfidfVectorizer (max_features=%s, max_df=%s, min_df=%s, ngram_range=%s)",
+        max_features, max_df, min_df, ngram_range
+    )
 
-        vectorizer = TfidfVectorizer(
-            max_features=max_features,
-            max_df=max_df,
-            min_df=min_df,
-            ngram_range=ngram_range
-        )
+    vectorizer = TfidfVectorizer(
+        max_features=max_features,
+        max_df=max_df,
+        min_df=min_df,
+        ngram_range=ngram_range,
+        dtype=np.float32
+    )
 
-        X_train = train_data['text'].values
-        y_train = train_data['sentiment'].values
-        X_test = test_data['text'].values
-        y_test = test_data['sentiment'].values
+    X_train_raw = train_data["text"].values.astype(str)
+    y_train = train_data["sentiment"].values.astype(int)
 
-        X_train_tfidf = vectorizer.fit_transform(X_train)
-        X_test_tfidf = vectorizer.transform(X_test)
+    X_test_raw = test_data["text"].values.astype(str)
+    y_test = test_data["sentiment"].values.astype(int)
 
-        train_df = pd.DataFrame(X_train_tfidf.toarray())
-        train_df['label'] = y_train
+    logger.info("Fitting TF-IDF vectorizer on %d training records...", len(X_train_raw))
+    X_train_tfidf = vectorizer.fit_transform(X_train_raw)
+    logger.info("Fitted vocabulary size: %d terms.", len(vectorizer.vocabulary_))
 
-        test_df = pd.DataFrame(X_test_tfidf.toarray())
-        test_df['label'] = y_test
+    logger.info("Transforming %d test records with fitted vectorizer...", len(X_test_raw))
+    X_test_tfidf = vectorizer.transform(X_test_raw)
 
-        pickle.dump(vectorizer, open('models/tfidf_vectorizer.pkl', 'wb'))
-        logging.info('TF-IDF applied and data transformed')
+    # Serialize vectorizer
+    os.makedirs(os.path.dirname(vectorizer_path), exist_ok=True)
+    with open(vectorizer_path, "wb") as f:
+        pickle.dump(vectorizer, f)
+    logger.info("Fitted TF-IDF vectorizer serialized to %s", vectorizer_path)
 
-        return train_df, test_df
-    except Exception as e:
-        logging.error('Error during TF-IDF transformation: %s', e)
-        raise
+    return X_train_tfidf, y_train, X_test_tfidf, y_test, vectorizer
 
 
-def save_data(df: pd.DataFrame, file_path: str) -> None:
-    """Save the dataframe to a CSV file."""
-    try:
-        os.makedirs(os.path.dirname(file_path), exist_ok=True)
-        df.to_csv(file_path, index=False)
-        logging.info('Data saved to %s', file_path)
-    except Exception as e:
-        logging.error('Unexpected error occurred while saving the data: %s', e)
-        raise
+def save_processed_artifacts(
+    X_train: sp.csr_matrix,
+    y_train: np.ndarray,
+    X_test: sp.csr_matrix,
+    y_test: np.ndarray,
+    output_dir: str = "data/processed",
+    csv_sample_size: int = 2000
+) -> None:
+    """
+    Saves sparse feature matrices and labels, and generates a structured
+    test CSV for holdout validation and testing suites.
+    """
+    os.makedirs(output_dir, exist_ok=True)
+
+    # 1. High performance compressed sparse matrices & labels
+    sp.save_npz(os.path.join(output_dir, "train_tfidf.npz"), X_train)
+    np.save(os.path.join(output_dir, "train_labels.npy"), y_train)
+
+    sp.save_npz(os.path.join(output_dir, "test_tfidf.npz"), X_test)
+    np.save(os.path.join(output_dir, "test_labels.npy"), y_test)
+    logger.info("Saved compressed sparse feature representations to %s", output_dir)
+
+    # 2. Save holdout test CSV (for backward compatibility with pandas test readers)
+    # Using a representative sample or full test set in float32
+    sample_size = min(len(y_test), csv_sample_size)
+    logger.info("Exporting %d test holdout rows to test_tfidf.csv...", sample_size)
+    sample_sparse = X_test[:sample_size].toarray()
+    test_df = pd.DataFrame(sample_sparse)
+    test_df["label"] = y_test[:sample_size]
+    test_csv_path = os.path.join(output_dir, "test_tfidf.csv")
+    test_df.to_csv(test_csv_path, index=False)
+    logger.info("Saved holdout validation dataset to %s (%d rows)", test_csv_path, len(test_df))
 
 
 def main():
     try:
-        params = load_params('params.yaml')
+        params = load_params("params.yaml")
+        interim_dir = os.path.join("data", "interim")
+        processed_dir = os.path.join("data", "processed")
 
-        train_data = load_data('./data/interim/train_processed.csv')
-        test_data = load_data('./data/interim/test_processed.csv')
+        train_path = os.path.join(interim_dir, "train_processed.csv")
+        test_path = os.path.join(interim_dir, "test_processed.csv")
 
-        train_df, test_df = apply_tfidf(train_data, test_data, params)
+        train_data = load_data(train_path)
+        test_data = load_data(test_path)
 
-        save_data(train_df, os.path.join("./data", "processed", "train_tfidf.csv"))
-        save_data(test_df, os.path.join("./data", "processed", "test_tfidf.csv"))
+        X_train, y_train, X_test, y_test, _ = apply_tfidf(
+            train_data,
+            test_data,
+            params,
+            vectorizer_path="models/tfidf_vectorizer.pkl"
+        )
+
+        save_processed_artifacts(
+            X_train, y_train, X_test, y_test,
+            output_dir=processed_dir,
+            csv_sample_size=2000
+        )
+        logger.info("Feature engineering stage completed successfully.")
+
     except Exception as e:
-        logging.error('Failed to complete the feature engineering process: %s', e)
-        print(f"Error: {e}")
+        logger.error("Feature engineering stage failed: %s", e, exc_info=True)
+        raise
 
 
-if __name__ == '__main__':
+if __name__ == "__main__":
     main()

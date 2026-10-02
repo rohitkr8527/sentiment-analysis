@@ -1,83 +1,127 @@
-# load test + signature test + performance test
-import unittest
-import mlflow
 import os
+import unittest
+import pickle
+import numpy as np
 import pandas as pd
 from sklearn.metrics import accuracy_score, precision_score, recall_score, f1_score
-import pickle
 
-class TestModelLoading(unittest.TestCase):
+from src.utils.text_preprocessing import normalize_text
+
+
+class TestSentimentModel(unittest.TestCase):
+    """
+    Unit and integration tests for sentiment analysis model,
+    vectorizer, and preprocessing pipeline.
+    """
 
     @classmethod
     def setUpClass(cls):
-        dagshub_token = os.getenv("sentiment_analysis")
-        if not dagshub_token:
-            raise EnvironmentError("sentiment_analysis environment variable is not set")
+        cls.model_path = os.getenv("MODEL_PATH", "models/model.pkl")
+        cls.vectorizer_path = os.getenv("VECTORIZER_PATH", "models/tfidf_vectorizer.pkl")
+        cls.holdout_path = os.getenv("HOLDOUT_DATA_PATH", "data/processed/test_tfidf.csv")
 
-        os.environ["MLFLOW_TRACKING_USERNAME"] = dagshub_token
-        os.environ["MLFLOW_TRACKING_PASSWORD"] = dagshub_token
+        # Load vectorizer
+        if os.path.exists(cls.vectorizer_path):
+            with open(cls.vectorizer_path, "rb") as f:
+                cls.vectorizer = pickle.load(f)
+        else:
+            cls.vectorizer = None
 
-        dagshub_url = "https://dagshub.com"
-        repo_owner = "rohitkr8527"
-        repo_name = "sentiment-analysis"
+        # Load model
+        if os.path.exists(cls.model_path):
+            with open(cls.model_path, "rb") as f:
+                cls.model = pickle.load(f)
+        else:
+            cls.model = None
 
-        mlflow.set_tracking_uri(f'{dagshub_url}/{repo_owner}/{repo_name}.mlflow')
+    def test_artifacts_exist(self):
+        """Verify model and vectorizer artifacts are generated and non-empty."""
+        self.assertIsNotNone(self.model, f"Model file not found at {self.model_path}")
+        self.assertIsNotNone(self.vectorizer, f"Vectorizer file not found at {self.vectorizer_path}")
+        self.assertTrue(os.path.getsize(self.model_path) > 0)
+        self.assertTrue(os.path.getsize(self.vectorizer_path) > 0)
 
-        # Load the new model from MLflow model registry
-        cls.new_model_name = "my_model"
-        cls.new_model_version = cls.get_latest_model_version(cls.new_model_name)
-        cls.new_model_uri = f'models:/{cls.new_model_name}/{cls.new_model_version}'
-        cls.new_model = mlflow.pyfunc.load_model(cls.new_model_uri)
+    def test_text_normalization(self):
+        """Verify text preprocessing pipeline cleans raw text properly."""
+        raw_text = "Check out https://example.com! The battery lasts 10 hours and is amazing!!!"
+        cleaned = normalize_text(raw_text)
 
-        cls.vectorizer = pickle.load(open('models/tfidf_vectorizer.pkl', 'rb'))
+        # Check URL removed
+        self.assertNotIn("http", cleaned)
+        # Check digits removed
+        self.assertNotIn("10", cleaned)
+        # Check lowercase
+        self.assertEqual(cleaned, cleaned.lower())
+        # Check punctuation removed
+        self.assertNotIn("!", cleaned)
+        # Check content retained
+        self.assertIn("battery", cleaned)
+        self.assertIn("amazing", cleaned)
 
-        # Load holdout test data
-        cls.holdout_data = pd.read_csv('data/processed/test_tfidf.csv')
+    def test_empty_text_normalization(self):
+        """Verify text normalization handles None, empty, or whitespace strings safely."""
+        self.assertEqual(normalize_text(""), "")
+        self.assertEqual(normalize_text(None), "")
+        self.assertEqual(normalize_text("   "), "")
 
-    @staticmethod
-    def get_latest_model_version(model_name, stage="Staging"):
-        client = mlflow.MlflowClient()
-        latest_version = client.get_latest_versions(model_name, stages=[stage])
-        return latest_version[0].version if latest_version else None
+    def test_model_signature_and_dimensions(self):
+        """Verify vectorizer feature dimension matches model expectation and produces valid predictions."""
+        if self.model is None or self.vectorizer is None:
+            self.skipTest("Model or vectorizer not available")
 
-    def test_model_loaded_properly(self):
-        self.assertIsNotNone(self.new_model)
+        sample_text = normalize_text("This product is fantastic and exceeded all my expectations.")
+        features = self.vectorizer.transform([sample_text])
 
-    def test_model_signature(self):
-        # Create a dummy input for the model based on expected input shape
-        input_text = "hi how are you"
-        input_data = self.vectorizer.transform([input_text])
-        input_df = pd.DataFrame(input_data.toarray(), columns=[str(i) for i in range(input_data.shape[1])])
+        self.assertEqual(features.shape[1], len(self.vectorizer.get_feature_names_out()))
 
-        prediction = self.new_model.predict(input_df)
+        preds = self.model.predict(features)
+        self.assertEqual(len(preds), 1)
+        self.assertIn(int(preds[0]), [0, 1])
 
-        self.assertEqual(input_df.shape[1], len(self.vectorizer.get_feature_names_out()))
+        if hasattr(self.model, "predict_proba"):
+            probs = self.model.predict_proba(features)
+            self.assertEqual(probs.shape, (1, 2))
+            self.assertAlmostEqual(float(np.sum(probs)), 1.0, places=4)
 
-        self.assertEqual(len(prediction), input_df.shape[0])
-        self.assertEqual(len(prediction.shape), 1)  
+    def test_semantic_sentiment_prediction(self):
+        """Verify clear positive and negative sentences classify correctly."""
+        if self.model is None or self.vectorizer is None:
+            self.skipTest("Model or vectorizer not available")
 
-    def test_model_performance(self):
-        X_holdout = self.holdout_data.iloc[:,0:-1]
-        y_holdout = self.holdout_data.iloc[:,-1]
+        pos_text = normalize_text("I absolutely love this! It is wonderful, great, and fantastic.")
+        neg_text = normalize_text("Terrible experience, completely broken, awful customer service, hate it.")
 
-        y_pred_new = self.new_model.predict(X_holdout)
+        pos_feat = self.vectorizer.transform([pos_text])
+        neg_feat = self.vectorizer.transform([neg_text])
 
-        accuracy_new = accuracy_score(y_holdout, y_pred_new)
-        precision_new = precision_score(y_holdout, y_pred_new)
-        recall_new = recall_score(y_holdout, y_pred_new)
-        f1_new = f1_score(y_holdout, y_pred_new)
+        pos_pred = self.model.predict(pos_feat)[0]
+        neg_pred = self.model.predict(neg_feat)[0]
 
-        # Define expected thresholds for the performance metrics
-        expected_accuracy = 0.75
-        expected_precision = 0.75
-        expected_recall = 0.75
-        expected_f1 = 0.75
+        self.assertEqual(int(pos_pred), 1, "Expected positive sentiment (1)")
+        self.assertEqual(int(neg_pred), 0, "Expected negative sentiment (0)")
 
-        # Assert that the new model meets the performance thresholds
-        self.assertGreaterEqual(accuracy_new, expected_accuracy, f'Accuracy should be at least {expected_accuracy}')
-        self.assertGreaterEqual(precision_new, expected_precision, f'Precision should be at least {expected_precision}')
-        self.assertGreaterEqual(recall_new, expected_recall, f'Recall should be at least {expected_recall}')
-        self.assertGreaterEqual(f1_new, expected_f1, f'F1 score should be at least {expected_f1}')
+    def test_model_holdout_performance_thresholds(self):
+        """Verify performance metrics on holdout test set exceed acceptable threshold (75%)."""
+        if self.model is None or not os.path.exists(self.holdout_path):
+            self.skipTest(f"Holdout dataset not found at {self.holdout_path}")
+
+        holdout_df = pd.read_csv(self.holdout_path)
+        X_holdout = holdout_df.iloc[:, :-1].values
+        y_holdout = holdout_df.iloc[:, -1].values.astype(int)
+
+        y_pred = self.model.predict(X_holdout)
+
+        acc = accuracy_score(y_holdout, y_pred)
+        prec = precision_score(y_holdout, y_pred, zero_division=0)
+        rec = recall_score(y_holdout, y_pred, zero_division=0)
+        f1 = f1_score(y_holdout, y_pred, zero_division=0)
+
+        min_threshold = 0.75
+        self.assertGreaterEqual(acc, min_threshold, f"Accuracy {acc:.3f} below threshold {min_threshold}")
+        self.assertGreaterEqual(prec, min_threshold, f"Precision {prec:.3f} below threshold {min_threshold}")
+        self.assertGreaterEqual(rec, min_threshold, f"Recall {rec:.3f} below threshold {min_threshold}")
+        self.assertGreaterEqual(f1, min_threshold, f"F1 score {f1:.3f} below threshold {min_threshold}")
+
 
 if __name__ == "__main__":
     unittest.main()

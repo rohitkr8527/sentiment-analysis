@@ -13,6 +13,7 @@ stages:
     deps:
     - data/raw
     - src/data/data_preprocessing.py
+    - src/utils/text_preprocessing.py
     outs:
     - data/interim
 

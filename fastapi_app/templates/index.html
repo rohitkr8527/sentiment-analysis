@@ -3,131 +3,281 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Sentiment Analysis App</title>
-    <meta name="description" content="FastAPI-powered Sentiment Analysis application that predicts whether text expresses positive or negative sentiment.">
-    <meta name="keywords" content="Sentiment Analysis, FastAPI, Machine Learning, NLP, Text Classification, AI">
-    <meta name="author" content="Rohit">
-    <link rel="icon" href="https://cdn-icons-png.flaticon.com/512/616/616408.png" type="image/png">
-
+    <title>Sentiment Analysis | Production API</title>
+    <meta name="description" content="Production-ready FastAPI Sentiment Analysis service classifying text into positive or negative sentiment.">
+    <link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><text y=%22.9em%22 font-size=%2290%22>⚡</text></svg>">
     <style>
-        body {
-            font-family: 'Helvetica Neue', Helvetica, Arial, sans-serif;
-            background-color: #f5f7fa;
-            color: #333;
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg-color: #f8fafc;
+            --card-bg: #ffffff;
+            --text-main: #1e293b;
+            --text-muted: #64748b;
+            --positive-bg: #dcfce7;
+            --positive-border: #86efac;
+            --positive-text: #166534;
+            --negative-bg: #fee2e2;
+            --negative-border: #fca5a5;
+            --negative-text: #991b1b;
+            --border-color: #e2e8f0;
+        }
+
+        * {
+            box-sizing: border-box;
             margin: 0;
             padding: 0;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            color: var(--text-main);
+            line-height: 1.6;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+        }
+
+        .container {
+            max-width: 820px;
+            width: 90%;
+            margin: 40px auto;
+            background: var(--card-bg);
+            border-radius: 16px;
+            padding: 40px;
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.05), 0 8px 10px -6px rgba(0, 0, 0, 0.02);
+            border: 1px solid var(--border-color);
+        }
+
+        header {
             text-align: center;
-        }
-        .app-container {
-            background-color: #fff;
-            border-radius: 12px;
-            padding: 50px 40px;
-            max-width: 900px;
-            margin: 50px auto;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-        }
-        header h1 {
-            font-size: 2.8em;
             margin-bottom: 30px;
         }
+
+        header h1 {
+            font-size: 2.2rem;
+            font-weight: 700;
+            color: #0f172a;
+            margin-bottom: 8px;
+        }
+
+        header p {
+            color: var(--text-muted);
+            font-size: 1.05rem;
+        }
+
+        .badges {
+            display: flex;
+            justify-content: center;
+            gap: 12px;
+            margin-top: 14px;
+        }
+
+        .badge {
+            font-size: 0.8rem;
+            font-weight: 600;
+            padding: 4px 10px;
+            border-radius: 9999px;
+            background: #eff6ff;
+            color: var(--primary);
+            border: 1px solid #bfdbfe;
+            text-decoration: none;
+        }
+
+        .badge:hover {
+            background: #dbeafe;
+        }
+
+        form {
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+        }
+
         label {
-            display: block;
-            font-size: 20px;
-            margin-bottom: 12px;
-            font-weight: bold;
-            text-align: left;
-            max-width: 800px;
-            margin-left: auto;
-            margin-right: auto;
+            font-weight: 600;
+            font-size: 1rem;
+            color: #334155;
         }
+
         textarea {
-            width: 90%;
-            max-width: 800px;
-            height: 250px;
-            font-size: 20px;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-            border: 1px solid #ccc;
+            width: 100%;
+            min-height: 160px;
+            padding: 16px;
             border-radius: 10px;
-            padding: 18px;
-            resize: none;
-            background-color: #fefefe;
-            box-shadow: inset 0 1px 3px rgba(0,0,0,0.1);
-            transition: all 0.3s ease;
+            border: 1.5px solid var(--border-color);
+            font-family: inherit;
+            font-size: 1rem;
+            color: var(--text-main);
+            background: #fff;
+            transition: all 0.2s ease-in-out;
+            resize: vertical;
         }
+
         textarea:focus {
-            border-color: #4a90e2;
-            box-shadow: 0 0 10px rgba(74,144,226,0.4);
             outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 4px rgba(37, 99, 235, 0.15);
         }
-        button {
-            background-color: #4a90e2;
+
+        .btn-submit {
+            background-color: var(--primary);
             color: white;
             border: none;
-            padding: 16px 32px;
-            font-size: 20px;
-            margin-top: 25px;
+            padding: 14px 28px;
+            font-size: 1.05rem;
+            font-weight: 600;
             border-radius: 10px;
             cursor: pointer;
             transition: all 0.2s ease;
+            align-self: flex-start;
         }
-        button:hover {
-            background-color: #357ab7;
-            transform: scale(1.05);
+
+        .btn-submit:hover {
+            background-color: var(--primary-hover);
+            transform: translateY(-1px);
         }
-        .result {
+
+        .alert-error {
+            background: #fef2f2;
+            border: 1px solid #fecaca;
+            color: #991b1b;
+            padding: 14px;
+            border-radius: 8px;
+            margin-top: 20px;
+            font-weight: 500;
+        }
+
+        .result-box {
             margin-top: 30px;
-            padding: 20px 50px;
-            font-size: 28px;
-            font-weight: bold;
-            border-radius: 10px;
-            display: inline-flex;
+            padding: 24px;
+            border-radius: 12px;
+            display: flex;
             align-items: center;
-            gap: 15px;
-            min-width: 220px;
-            justify-content: center;
-            opacity: 0;
-            animation: fadeIn 0.5s forwards;
+            justify-content: space-between;
+            animation: fadeIn 0.4s ease-in-out;
+            border-width: 1.5px;
+            border-style: solid;
         }
-        .positive {
-            color: #155724;
-            background-color: #d4edda;
-            border: 1px solid #c3e6cb;
+
+        .result-positive {
+            background-color: var(--positive-bg);
+            border-color: var(--positive-border);
+            color: var(--positive-text);
         }
-        .negative {
-            color: #721c24;
-            background-color: #f8d7da;
-            border: 1px solid #f5c6cb;
+
+        .result-negative {
+            background-color: var(--negative-bg);
+            border-color: var(--negative-border);
+            color: var(--negative-text);
         }
+
+        .result-main {
+            display: flex;
+            align-items: center;
+            gap: 16px;
+        }
+
+        .result-icon {
+            font-size: 2.4rem;
+        }
+
+        .result-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+        }
+
+        .result-details {
+            text-align: right;
+            font-size: 0.95rem;
+            font-weight: 500;
+        }
+
+        .confidence-pill {
+            display: inline-block;
+            padding: 4px 10px;
+            border-radius: 6px;
+            font-weight: 700;
+            background: rgba(255, 255, 255, 0.7);
+        }
+
+        footer {
+            margin-top: auto;
+            text-align: center;
+            padding: 24px;
+            color: var(--text-muted);
+            font-size: 0.9rem;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        footer a:hover {
+            text-decoration: underline;
+        }
+
         @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(-10px); }
+            from { opacity: 0; transform: translateY(-8px); }
             to { opacity: 1; transform: translateY(0); }
         }
     </style>
 </head>
 <body>
-    <div class="app-container">
+    <div class="container">
         <header>
-            <h1>Sentiment Analysis Application</h1>
+            <h1>Sentiment Analysis Service</h1>
+            <p>Classify user sentiment with high-speed TF-IDF and Logistic Regression</p>
+            <div class="badges">
+                <a href="/docs" class="badge">Swagger API Docs</a>
+                <a href="/health" class="badge">Health Probe</a>
+                <a href="/metrics" class="badge">Prometheus Metrics</a>
+            </div>
         </header>
 
         <main>
             <form action="/predict" method="POST" aria-label="Sentiment Analysis Form">
-                <label for="text">Enter your text:</label>
-                <textarea id="text" name="text" placeholder="Type or paste your text here..." required>{{ text_input if text_input is defined else '' }}</textarea>
-                <br>
-                <button type="submit">Analyze Sentiment</button>
+                <label for="text-input">Enter text to evaluate:</label>
+                <textarea 
+                    id="text-input" 
+                    name="text" 
+                    placeholder="E.g., 'The customer service was exceptionally helpful and resolved my issue immediately!'" 
+                    required>{{ text_input if text_input else '' }}</textarea>
+                <button type="submit" class="btn-submit">Analyze Sentiment</button>
             </form>
 
+            {% if error %}
+                <div class="alert-error" role="alert">
+                    {{ error }}
+                </div>
+            {% endif %}
+
             {% if result is not none %}
-                <div class="result {% if result == 1 %}positive{% else %}negative{% endif %}" role="status" aria-live="polite">
-                    {% if result == 1 %}
-                        <span>😊</span> Positive
-                    {% else %}
-                        <span>😞</span> Negative
-                    {% endif %}
+                <div class="result-box {% if result == 1 %}result-positive{% else %}result-negative{% endif %}" role="status">
+                    <div class="result-main">
+                        <div class="result-icon">{% if result == 1 %}😊{% else %}😞{% endif %}</div>
+                        <div>
+                            <div class="result-title">{{ sentiment_label }} Sentiment</div>
+                            <div style="font-size: 0.9rem; opacity: 0.85;">Class label: {{ result }}</div>
+                        </div>
+                    </div>
+                    <div class="result-details">
+                        {% if confidence %}
+                            <div>Confidence: <span class="confidence-pill">{{ confidence }}</span></div>
+                        {% endif %}
+                        {% if latency_ms %}
+                            <div style="margin-top: 4px; opacity: 0.8;">Latency: {{ latency_ms }} ms</div>
+                        {% endif %}
+                    </div>
                 </div>
             {% endif %}
         </main>
     </div>
+
+    <footer>
+        Production-Ready Sentiment Analysis Pipeline &bull; Deployed on Microsoft Azure &bull; <a href="/docs">REST API Documentation</a>
+    </footer>
 </body>
 </html>

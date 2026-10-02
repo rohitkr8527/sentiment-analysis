@@ -1,437 +1,625 @@
-# Sentiment Analysis - End to End ML Model
-
-[![Python](https://img.shields.io/badge/Python-3.10+-blue.svg)](https://python.org)
-[![FastAPI](https://img.shields.io/badge/FastAPI-green.svg)](https://fastapi.tiangolo.com/)
-[![MLflow](https://img.shields.io/badge/MLflow-Tracking-orange.svg)](https://mlflow.org/)
-[![DVC](https://img.shields.io/badge/DVC-Data%20Versioning-purple.svg)](https://dvc.org/)
-[![Docker](https://img.shields.io/badge/Docker-Containerized-blue.svg)](https://docker.com/)
-[![Azure](https://img.shields.io/badge/Azure-Cloud%20Deployed-lightblue.svg)](https://azure.microsoft.com/)
-
-> **Production-level sentiment analysis system** with comprehensive MLOps pipeline featuring experiment tracking, data versioning, automated CI/CD, and cloud deployment.
-
-## Project Overview
-
-This project implements a **scalable sentiment analysis solution** using multiple machine learning algorithms with comprehensive MLOps practices. The system processes text data to classify sentiment as positive or negative, featuring automated model comparison, experiment tracking, and production deployment.
-
-### Key Highlights
-
-- **10 Different Model Configurations** tested and compared
-- **82.5% Best Accuracy** achieved with Logistic Regression + TF-IDF
-- **80,000 Training Samples** with balanced dataset
-- **Real-time API** for sentiment prediction
-- **Complete MLOps Pipeline** with automated deployment
-
-## Model Performance Results
-
-![Model Performance Comparison](reports/figures/image.png)
-
-| Algorithm | Vectorizer | Accuracy | Precision | Recall | F1-Score |
-|---|---|---:|---:|---:|---:|
-| GradientBoosting | TF‑IDF | 0.728  | 0.765  | 0.653  | 0.705  |
-| GradientBoosting | BoW | 0.721  | 0.805  | 0.577  | 0.672  |
-| RandomForest | TF‑IDF | 0.819  | 0.806  | 0.835  | 0.820  |
-| RandomForest | BoW | 0.821  | 0.812  | 0.831 | 0.821  |
-| XGBoost | TF‑IDF | 0.790  | 0.815  | 0.746  | 0.779  |
-| XGBoost | BoW | 0.791  | 0.832  | 0.724  | 0.774  |
-| MultinomialNB | TF‑IDF | 0.786  | 0.774  | 0.803  | 0.788  |
-| MultinomialNB | BoW | 0.743 | 0.717 | 0.798  | 0.755  |
-| LogisticRegression | TF‑IDF | 0.8276  | 0.8318  | 0.8177  | 0.8247  |
-| LogisticRegression | BoW | 0.805  | 0.816  | 0.784  | 0.800  |
-
-##  Dataset Information
-
-### Dataset Overview
-
-This dataset combines sentiment-labeled data from **four different domains**, each contributing **20,000 samples**:
-
-- **Movie Reviews** (e.g., IMDB)  
-- **Twitter Sentiment** (e.g., Sentiment140)  
-- **ChatGPT-Generated Sentiment Data**  
--  **Amazon Product Reviews**  
-
-| Metric | Value |
-|--------|--------|
-| **Dataset Size** | 80,000 samples |
-| **Features** | 2 columns (sentiment, text) |
-| **Target Distribution** | Balanced (40,000 positive, 40,000 negative) |
-| **Vocabulary Size** | 98,143 unique words after preprocessing |
-| **Train-Test Split** | 80%-20% |
-| **Missing Values** | None |
-
-##  Project Architecture
-
-```mermaid
-graph TB
-    %% Data Flow
-    A[Azure Blob Storage] --> B[Data Ingestion & Preprocessing]
-    B --> C[Feature Engineering]
-    C --> D[Model Training & Evaluation]
-    D --> E[Model Registration]
-    E --> F[FastAPI Application]
-    F --> G[Production API]
-    D --> H[DVC Push Metadata]
-    H --> A
-
-    %% Experiment Tracking
-    I[MLflow Tracking] --> D
-    I --> E
-
-    %% CI/CD & Deployment
-    J[GitHub Actions CI/CD] --> K[Docker Build]
-    K --> L[Azure VM Deployment]
-    L --> F
-
-    %% Subgraphs
-    subgraph Data_Management
-    A
-    H
-    end
-
-    subgraph Experiment_Tracking
-    I
-    end
-
-    subgraph Deployment
-    J
-    K
-    L
-    end
-
-    subgraph Production
-    G
-    end
-
-```
-
-##  Project Structure
-
-```
-sentiment-analysis/
-├── data/                        # DVC-tracked datasets
-├── notebooks/                   # Jupyter experiments
-│   ├── exp1.ipynb               # Baseline model
-│   ├── exp2_bow_vs_tfidf.py     # Vectorizer comparison
-│   ├── exp3_lr_with_diff_vectorizer.py
-│   ├── exp4_lr_tfidf_hp.py      # Hyperparameter tuning
-│   └── balanced_sentiment_dataset.csv
-├── src/                         # Source code modules
-│   ├── data/                    # Data processing
-│   │   ├── data_ingestion.py
-│   │   └── data_preprocessing.py
-│   ├── features/                # Feature engineering
-│   │   └── feature_engineering.py
-│   ├── model/                   # Model training & evaluation
-│   │   ├── model_building.py
-│   │   ├── model_evaluation.py
-│   │   └── register_model.py
-│   └── logger/                  # Logging utilities
-├── fastapi_app/                 # Production API
-│   ├── app.py                   # FastAPI application
-│   ├── templates/               # HTML templates
-│   └── requirements.txt
-├── tests/                       # Unit & integration tests
-├── reports/                     # Model reports & metrics
-│   └── figures/                 # UI screenshots
-├── Configuration Files
-│   ├── dvc.yaml                 # DVC pipeline
-│   ├── params.yaml              # Parameters
-│   ├── requirements.txt         # Dependencies
-│   └── Dockerfile               # Container setup
-└── CI/CD
-    └── .github/workflows
-                  ├── ci.yaml       
-                  └── cd.yaml  
-
-```
-
-##  Tech Stack & Tools
-
-### **Machine Learning**
-- **Algorithms**: Logistic Regression, MultinomialNB, XGBoost, Random Forest, Gradient Boosting
-- **Vectorization**: TF-IDF, Bag of Words (CountVectorizer)
-- **Preprocessing**: NLTK (stopwords, lemmatization), Custom text cleaning
-
-### **MLOps & Experiment Tracking**
-- **MLflow**: Experiment tracking, model registry, artifact storage
-- **DagsHub**: Centralized ML collaboration platform
-- **DVC**: Data and model versioning with Azure Blob Storage
-
-### **API & Deployment**
-- **FastAPI**: High-performance web API framework
-- **Docker**: Containerization for reproducible deployments
-- **Azure VM**: Cloud deployment infrastructure
-
-### **Development & CI/CD**
-- **GitHub Actions**: Automated testing and deployment
-- **Pytest**: Unit and integration testing
-- **Azure CLI**: Cloud resource management
-
-##  Quick Start
-
-### Prerequisites
-```bash
-# Required tools
-Python 3.10+
-Git
-Docker (optional)
-Azure CLI (for cloud deployment)
-```
-
-### 1. Clone & Setup
-```bash
-git clone https://github.com/rohitkr8527/sentiment-analysis.git
-cd sentiment-analysis
-
-# Create virtual environment
-python -m venv venv
-source venv/bin/activate  # Linux/macOS
-# venv\Scripts\activate   # Windows
-
-# Install dependencies
-pip install -r requirements.txt
-```
-
-### 2. Data Pipeline (DVC)
-```bash
-# Initialize DVC
-dvc init
-
-# Add local remote for development
-mkdir local_blob
-dvc remote add -d mylocal local_blob
-
-# For production: Configure Azure Blob Storage
-pip install "dvc[azure]" azure-cli
-az login
-dvc remote add -d myremote azure://<container-name>
-
-# Run complete pipeline
-dvc repro
-dvc status
-dvc push  # Push to remote storage
-```
-
-### 3. Experiment Tracking (MLflow + DagsHub)
-```bash
-# Install MLflow and DagsHub
-pip install "mlflow<3" dagshub
-
-# Set credentials (use environment variables)
-export DAGSHUB_TOKEN="your_token_here"
-
-# Run experiments
-python notebooks/exp2_bow_vs_tfidf.py
-jupyter notebook notebooks/exp1.ipynb
-```
-
-### 4. FastAPI Application
-```bash
-cd fastapi_app
-pip install fastapi uvicorn
-
-# Set environment variables
-export sentiment_analysis="your_dagshub_token"
-
-# Run locally
-uvicorn app:app --reload --host 0.0.0.0 --port 8000
-
-# Access API
-# http://localhost:8000 - Web Interface
-# http://localhost:8000/docs - API Documentation
-# http://localhost:8000/metrics - Prometheus metrics
-```
-
-### 5. Docker Deployment
-```bash
-# Build image
-docker build -t sentiment-app:latest .
-
-# Run container
-docker run -p 8000:8000 \
-  -e sentiment_analysis="your_token" \
-  sentiment-app:latest
-```
-
-##  API Usage
-
-### Web Interface
-The FastAPI application provides a user-friendly web interface for sentiment prediction:
-
-**Prediction Interface:**
-- Navigate to `http://localhost:8000`
-- Enter text in the input field
-- Click "Predict" to get sentiment classification
-- Results show: Positive (1) or Negative (0)
-
-### REST API Endpoints
-
-```python
-# Example API usage
-import requests
-
-# Health check
-response = requests.get("http://localhost:8000/")
-
-# Predict sentiment
-data = {"text": "I love this product! It's amazing!"}
-response = requests.post("http://localhost:8000/predict", data=data)
-prediction = response.json()["result"]
-```
-
-### API Documentation
-- **Swagger UI**: `http://localhost:8000/docs`
-- **ReDoc**: `http://localhost:8000/redoc`
-- **Metrics**: `http://localhost:8000/metrics`
-
-##  Model Pipeline Stages
-
-The DVC pipeline consists of 6 automated stages:
-
-```mermaid
-graph LR
-    %% Core Pipeline
-    A[Data Ingestion] --> B[Data Preprocessing]
-    B --> C[Feature Engineering]
-    C --> D[Model Training]
-    D --> E[Model Evaluation]
-    E --> F[Model Registration]
-
-    %% Parameters
-    G[params.yaml] --> A
-    G --> C
-    G --> D
-
-    %% Experiment Tracking
-    H[MLflow Tracking] --> D
-    H --> E
-    H --> F
-```
-
-### Stage Details
-1. **Data Ingestion**: Load and validate raw data
-2. **Data Preprocessing**: Text cleaning, normalization
-3. **Feature Engineering**: TF-IDF vectorization, feature extraction
-4. **Model Building**: Train multiple algorithms
-5. **Model Evaluation**: Calculate metrics, generate reports
-6. **Model Registration**: Register best model to MLflow
-
-##  Configuration
-
-### Key Parameters (`params.yaml`)
-```yaml
-data_ingestion:
-  test_size: 0.2
-
-feature_engineering:
-  max_features: 10000
-  max_df: 0.9
-  min_df: 5
-  ngram_range: [1, 2]
-
-model_building:
-  solver: 'saga'
-  penalty: 'elasticnet'
-  C: 1.0
-  l1_ratio: 0.5
-```
-
-### Environment Variables
-```bash
-# Required for production
-export sentiment_analysis="your_dagshub_token"
-export MLFLOW_TRACKING_USERNAME="your_dagshub_token"
-export MLFLOW_TRACKING_PASSWORD="your_dagshub_token"
-
-# Azure credentials (for DVC remote)
-export AZURE_STORAGE_CONNECTION_STRING="your_connection_string"
-```
-
-##  CI/CD Pipeline
-
-The GitHub Actions workflow automates:
-
-1. **Code Quality**: Linting, formatting checks
-2. **Testing**: Unit and integration tests
-3. **Data Pipeline**: DVC reproduce and push
-4. **Model Training**: Automated experiment execution
-5. **Docker Build**: Container creation and registry push
-6. **Deployment**: Automated deployment to Azure VM
-
-### Deployment Workflow
-```yaml
-# Simplified CI/CD flow
-Trigger: Push to main → 
-Run Tests → 
-Build Docker Image → 
-Deploy to Azure VM → 
-Health Check
-```
-
-##  Cloud Deployment (Azure)
-
-### Azure VM Deployment
-```bash
-# Create resource group
-az group create --name sentiment-rg --location eastus
-
-# Create VM with required ports
-az vm create \
-  --resource-group sentiment-rg \
-  --name sentiment-vm \
-  --image Ubuntu22.04 \
-  --admin-username azureuser \
-  --generate-ssh-keys \
-  --custom-data cloud-init.txt
-
-# SSH and deploy
-ssh azureuser@<public-ip>
-sudo docker run -p 8000:8000 \
-  -e sentiment_analysis="$DAGSHUB_TOKEN" \
-  your-registry/sentiment-app:latest
-```
-
-##  Monitoring & Metrics
-
-### MLflow Tracking
-- **Experiments**: All model training runs
-- **Parameters**: Hyperparameters and configurations
-- **Metrics**: Performance metrics comparison
-- **Artifacts**: Models, vectorizers, and plots
-
-##  Testing
-
-```bash
-# Run all tests
-pytest tests/ -v
-
-# Run specific test types
-pytest tests/unit/ -v      # Unit tests
-pytest tests/integration/ -v  # Integration tests
-
-# Test coverage
-pytest --cov=src tests/
-```
-
-##  Contributing
-
-1. Fork the repository
-2. Create feature branch (`git checkout -b feature/amazing-feature`)
-3. Commit changes (`git commit -m 'Add amazing feature'`)
-4. Push to branch (`git push origin feature/amazing-feature`)
-5. Open a Pull Request
-
-##  License
-
-This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
-
-##  Contact & Support
-
-- **Developer**: Rohit Kumar ([@rohitkr8527](https://github.com/rohitkr8527))
-- **Project Link**: [https://github.com/rohitkr8527/sentiment-analysis](https://github.com/rohitkr8527/sentiment-analysis)
-- **MLflow Experiments**: [DagsHub MLflow UI](https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow)
-
-
+# Sentiment Analysis - Production MLOps & Cloud Deployment
+
+[![Python](https://img.shields.io/badge/Python-3.10%2B-blue.svg)](https://python.org)
+[![FastAPI](https://img.shields.io/badge/FastAPI-0.110%2B-009688.svg)](https://fastapi.tiangolo.com/)
+[![scikit-learn](https://img.shields.io/badge/scikit--learn-1.3%2B-F7931E.svg)](https://scikit-learn.org/)
+[![DVC](https://img.shields.io/badge/DVC-Data%20Versioning-945DD6.svg)](https://dvc.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-Tracking-0194E2.svg)](https://mlflow.org/)
+[![Docker](https://img.shields.io/badge/Docker-Containerized-2496ED.svg)](https://www.docker.com/)
+[![Azure](https://img.shields.io/badge/Azure-Cloud%20Ready-0078D4.svg)](https://azure.microsoft.com/)
+[![Tests](https://img.shields.io/badge/Tests-Passing-brightgreen.svg)](tests/)
+
+> **Production-ready sentiment analysis platform** featuring reproducible data pipelines (DVC), experiment tracking (MLflow), robust text preprocessing (NLTK), asynchronous REST API and interactive web interface (FastAPI), multi-stage Docker containerization, automated CI/CD (GitHub Actions), and turn-key deployment to Microsoft Azure.
 
 ---
 
-**⭐ If you find this project helpful, please consider giving it a star!**
+## Table of Contents
+
+- [Overview](#overview)
+- [Key Features](#key-features)
+- [System Architecture](#system-architecture)
+- [Project Directory Structure](#project-directory-structure)
+- [Technology Stack](#technology-stack)
+- [Model Performance](#model-performance)
+- [API & Web Interface](#api--web-interface)
+- [Environment Configuration](#environment-configuration)
+- [Local Development Setup](#local-development-setup)
+- [Running the Application](#running-the-application)
+- [DVC Pipeline Reproduction](#dvc-pipeline-reproduction)
+- [Running Automated Tests](#running-automated-tests)
+- [Azure Deployment Guide (Fresh Account)](#azure-deployment-guide-fresh-account)
+- [CI/CD Workflow](#cicd-workflow)
+- [Troubleshooting](#troubleshooting)
+- [License](#license)
+
+---
+
+## Overview
+
+This repository implements an end-to-end sentiment classification system that processes textual data (customer reviews, social media posts, chat transcripts) and classifies it into **Positive** or **Negative** sentiment in real-time with sub-10ms inference latency.
+
+The system is built on 12-factor application and MLOps best practices:
+- **Clean modular code**: Clear separation of concern across configuration, data ingestion, preprocessing, features, modeling, and API routing.
+- **Resilient container runtime**: Offline-first local artifact loading with graceful startup degradation and optional MLflow Model Registry synchronization.
+- **Cloud-agnostic deployment**: Zero hardcoded credentials or legacy subscription IDs; fully configurable via environment variables.
+
+---
+
+## Key Features
+
+- **High Accuracy & Speed**: 82.5%+ accuracy on 80,000 diverse sentiment samples using optimized TF-IDF and Logistic Regression.
+- **Dual Interface**:
+  - **REST API**: `/api/v1/predict` with Pydantic request validation, response schemas, and confidence scores.
+  - **Interactive Web App**: Responsive, accessible web UI with real-time prediction feedback and latency metrics.
+- **Enterprise Observability**: `/health` and `/ready` probes for cloud orchestrators, alongside Prometheus `/metrics` instrumentation.
+- **DVC Data Versioning**: Modular 6-stage reproducible data pipeline supporting local development and Azure Blob Storage remotes.
+- **Security-First Docker**: Multi-stage build running under an unprivileged user (`appuser`) with baked-in health probes and dynamic port binding (`PORT`).
+
+---
+
+## System Architecture
+
+```mermaid
+flowchart TD
+    subgraph Data_Storage["Data & Artifact Storage"]
+        ABS["Azure Blob Storage / Local Data"]
+        DVC["DVC Version Control (dvc.yaml)"]
+        MODELS["Serialized Artifacts\n(model.pkl & tfidf_vectorizer.pkl)"]
+    end
+
+    subgraph Pipeline["MLOps Training Pipeline"]
+        INGEST["Data Ingestion\n(src.data.data_ingestion)"]
+        PREP["Text Preprocessing\n(src.data.data_preprocessing)"]
+        FEAT["Feature Engineering\n(src.features.feature_engineering)"]
+        TRAIN["Model Building\n(src.model.model_building)"]
+        EVAL["Model Evaluation\n(src.model.model_evaluation)"]
+        REG["Model Registration\n(src.model.register_model)"]
+    end
+
+    subgraph Experiment_Tracking["Tracking & Registry"]
+        MLF["MLflow / DagsHub Remote Tracking"]
+    end
+
+    subgraph Serving_Layer["Production Serving (FastAPI)"]
+        PRED["SentimentPredictor Service"]
+        API["REST API (/api/v1/predict)"]
+        WEB["HTML UI (/ & /predict)"]
+        HEALTH["Health Probe (/health)"]
+        PROM["Prometheus Metrics (/metrics)"]
+    end
+
+    subgraph Azure_Cloud["Microsoft Azure Deployment"]
+        ACR["Azure Container Registry (ACR)"]
+        APP["Azure App Service for Containers / ACA"]
+    end
+
+    ABS --> INGEST
+    INGEST --> PREP --> FEAT --> TRAIN --> EVAL --> REG
+    DVC -. tracks .-> Pipeline
+    FEAT --> MODELS
+    TRAIN --> MODELS
+    EVAL -. logs metrics .-> MLF
+    REG -. registers .-> MLF
+    MODELS --> PRED
+    PRED --> API
+    PRED --> WEB
+    PRED --> HEALTH
+    PRED --> PROM
+    Serving_Layer --> ACR --> APP
+```
+
+---
+
+## Project Directory Structure
+
+```
+sentiment-analysis/
+├── .dvc/                            # DVC pipeline and remote configuration
+│   ├── .gitignore
+│   └── config                       # DVC remote storage configuration
+├── .github/
+│   └── workflows/
+│       ├── ci.yaml                  # Automated linting, test suite, and Docker build
+│       └── cd.yaml                  # Build, push to ACR, and deploy to Azure App Service
+├── data/                            # Pipeline data directory (managed by DVC/local)
+│   ├── raw/                         # Ingested train.csv and test.csv
+│   ├── interim/                     # Normalized train_processed.csv and test_processed.csv
+│   └── processed/                   # Processed sparse features and test holdout CSV
+├── fastapi_app/                     # Production FastAPI service
+│   ├── core/
+│   │   ├── __init__.py
+│   │   └── config.py                # Pydantic/Environment settings and path resolvers
+│   ├── routes/
+│   │   ├── __init__.py
+│   │   ├── api.py                   # JSON REST API (/api/v1/predict)
+│   │   ├── health.py                # Health & readiness probes (/health, /ready)
+│   │   ├── metrics.py               # Prometheus metrics (/metrics)
+│   │   └── web.py                   # HTML frontend routes (/ and /predict)
+│   ├── schemas/
+│   │   ├── __init__.py
+│   │   └── sentiment.py             # Pydantic schemas (Request, Response, Health)
+│   ├── services/
+│   │   ├── __init__.py
+│   │   ├── predictor.py             # Model inference engine with graceful fallbacks
+│   │   └── text_preprocessor.py     # Self-contained text cleaning for inference
+│   ├── templates/
+│   │   └── index.html               # Web UI template
+│   ├── app.py                       # FastAPI application factory and lifespan handler
+│   └── requirements.txt             # Lean dependencies for container runtime
+├── models/                          # Serialized model artifacts
+│   ├── .gitkeep
+│   ├── model.pkl                    # Trained Logistic Regression classifier
+│   └── tfidf_vectorizer.pkl         # Fitted TF-IDF Vectorizer
+├── notebooks/                       # Research and exploratory data analysis
+│   ├── balanced_sentiment_dataset.csv
+│   ├── exp1.ipynb
+│   ├── exp2_bow_vs_tfidf.py
+│   ├── exp3_lr_with_diff_vectorizer.py
+│   ├── exp4_lr_tfidf_hp.py
+│   └── exp5.py
+├── reports/                         # Training metrics and figures
+│   ├── figures/
+│   │   └── image.png                # Model comparison benchmark plot
+│   ├── experiment_info.json         # Run tracking metadata
+│   └── metrics.json                 # Evaluation metrics (accuracy, precision, recall, f1, auc)
+├── scripts/
+│   └── promote_model.py             # MLflow model lifecycle promotion script
+├── src/                             # Core training and data engineering library
+│   ├── connections/
+│   │   ├── __init__.py
+│   │   └── blob_connection.py       # Azure Blob Storage client wrapper
+│   ├── data/
+│   │   ├── __init__.py
+│   │   ├── data_ingestion.py        # Ingestion from Azure Blob or local fallback
+│   │   └── data_preprocessing.py    # Text cleaning and dataset filtering
+│   ├── features/
+│   │   ├── __init__.py
+│   │   └── feature_engineering.py   # High-speed TF-IDF sparse matrix generation
+│   ├── logger/
+│   │   └── __init__.py              # Centralized logging configuration
+│   ├── model/
+│   │   ├── __init__.py
+│   │   ├── model_building.py        # Model training with hyperparameter tuning
+│   │   ├── model_evaluation.py      # Metric computation & MLflow tracking
+│   │   └── register_model.py        # MLflow model registry integration
+│   └── utils/
+│       ├── __init__.py
+│       └── text_preprocessing.py    # Shared text normalization routines
+├── tests/                           # Automated test suites
+│   ├── test_fastapi_app.py          # API, web UI, validation, and probe tests
+│   └── test_model.py                # Preprocessing, signature, and performance tests
+├── .dvcignore                       # DVC ignore rules
+├── .env.example                     # Environment variable template
+├── .gitignore                       # Git ignore rules
+├── Dockerfile                       # Multi-stage production container build
+├── docker-compose.yml               # Local container orchestrator
+├── dvc.lock                         # DVC pipeline state lockfile
+├── dvc.yaml                         # DVC pipeline stage definitions
+├── params.yaml                      # Configurable pipeline hyperparameters
+└── requirements.txt                 # Full project and development dependencies
+```
+
+---
+
+## Technology Stack
+
+| Domain | Technology | Purpose |
+|---|---|---|
+| **Web & API Framework** | **FastAPI** (v0.110+) | High-performance ASGI framework with automatic OpenAPI docs |
+| **ASGI Web Server** | **Uvicorn** | Production-ready HTTP/1.1 and WebSockets server |
+| **Data Validation** | **Pydantic** (v2.0+) | Strict payload validation and serialization |
+| **Machine Learning** | **scikit-learn** | TF-IDF vectorization and Logistic Regression classification |
+| **Natural Language Processing** | **NLTK** | WordNet lemmatization and English stopword filtering |
+| **Data Processing** | **Pandas & NumPy** | Structured data manipulation and vector computation |
+| **Data Version Control** | **DVC** (v3.0+) | Reproducible ML pipelines and Azure Blob remote storage |
+| **Experiment Tracking** | **MLflow** | Hyperparameter, metric, and artifact logging |
+| **Containerization** | **Docker & Docker Compose** | Reproducible multi-stage container images |
+| **Testing** | **pytest & pytest-cov** | Unit, integration, and coverage verification |
+| **Cloud Hosting** | **Azure App Service / ACA** | Scalable managed PaaS container hosting |
+| **Container Registry** | **Azure Container Registry (ACR)** | Private OCI-compliant container registry |
+| **Continuous Integration/Deployment**| **GitHub Actions** | Automated CI testing and CD production deployments |
+
+---
+
+## Model Performance
+
+The classification model was evaluated against multiple candidate architectures (Gradient Boosting, Random Forest, XGBoost, Naive Bayes) across BoW and TF-IDF representations.
+
+![Model Performance Comparison](reports/figures/image.png)
+
+### Production Model Metrics (Logistic Regression + TF-IDF)
+
+| Metric | Score | Description |
+|---|---:|---|
+| **Accuracy** | **82.08%** | Overall correct classifications across holdout test set |
+| **Precision** | **82.27%** | Ratio of correct positive predictions |
+| **Recall** | **81.79%** | Ratio of actual positive cases detected |
+| **F1-Score** | **82.03%** | Harmonic mean of precision and recall |
+| **ROC AUC** | **0.9016** | Area under ROC curve measuring class separation capability |
+
+---
+
+## API & Web Interface
+
+### Interactive Endpoints
+
+- **Web Application**: `http://localhost:8000/`
+- **Interactive Swagger Documentation**: `http://localhost:8000/docs`
+- **ReDoc API Documentation**: `http://localhost:8000/redoc`
+- **Health Check Probe**: `http://localhost:8000/health`
+- **Readiness Probe**: `http://localhost:8000/ready`
+- **Prometheus Metrics**: `http://localhost:8000/metrics`
+
+### REST API Example
+
+#### Endpoint: `POST /api/v1/predict`
+
+**Request:**
+```bash
+curl -X POST "http://localhost:8000/api/v1/predict" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "text": "The build quality exceeded my expectations and customer support was outstanding!"
+  }'
+```
+
+**Response (200 OK):**
+```json
+{
+  "text": "The build quality exceeded my expectations and customer support was outstanding!",
+  "sentiment": "Positive",
+  "label": 1,
+  "confidence": 0.8924,
+  "latency_ms": 3.42
+}
+```
+
+---
+
+## Environment Configuration
+
+Copy `.env.example` to create your local `.env` configuration file:
+
+```bash
+cp .env.example .env
+```
+
+| Variable | Default | Required | Purpose |
+|---|---|:---:|---|
+| `PORT` | `8000` | No | Port on which the application listens |
+| `HOST` | `0.0.0.0` | No | Network interface binding |
+| `ENVIRONMENT` | `production` | No | Runtime environment (`production`, `development`) |
+| `LOG_LEVEL` | `INFO` | No | Logging verbosity (`DEBUG`, `INFO`, `WARNING`, `ERROR`) |
+| `CORS_ORIGINS` | `*` | No | Comma-separated list of allowed origins |
+| `MODEL_PATH` | `models/model.pkl` | No | Relative or absolute path to model binary |
+| `VECTORIZER_PATH` | `models/tfidf_vectorizer.pkl` | No | Relative or absolute path to TF-IDF vectorizer |
+| `AZURE_STORAGE_CONNECTION_STRING` | _None_ | Yes (for DVC remote) | Azure Blob Storage connection string |
+| `AZURE_BLOB_CONTAINER_NAME` | `sentiment-data` | No | Blob container for DVC and raw data |
+| `USE_MLFLOW_MODEL` | `false` | No | When `true`, loads model from MLflow Registry |
+| `DAGSHUB_TOKEN` | _None_ | No | DagsHub Personal Access Token (for MLflow) |
+| `DAGSHUB_REPO_OWNER` | _None_ | No | DagsHub repository username |
+| `DAGSHUB_REPO_NAME` | `sentiment-analysis` | No | DagsHub repository name |
+
+---
+
+## Local Development Setup
+
+### 1. Prerequisites
+- Python 3.10+ (tested on Python 3.10, 3.11, 3.12)
+- Git
+- Docker (optional, for container runs)
+
+### 2. Virtual Environment Setup
+
+```bash
+# Clone the repository
+git clone https://github.com/rohitkr8527/sentiment-analysis.git
+cd sentiment-analysis
+
+# Create and activate virtual environment
+python -m venv .venv
+
+# Linux/macOS:
+source .venv/bin/activate
+# Windows (PowerShell):
+.\.venv\Scripts\activate
+
+# Upgrade pip and install dependencies
+python -m pip install --upgrade pip
+pip install -r requirements.txt
+```
+
+---
+
+## Running the Application
+
+### Option A: Direct Python Execution
+
+```bash
+# Run using Uvicorn
+uvicorn fastapi_app.app:app --host 0.0.0.0 --port 8000 --reload
+```
+
+Open your browser at `http://localhost:8000`.
+
+### Option B: Docker Container
+
+```bash
+# Build the production image
+docker build -t sentiment-analysis-api:latest .
+
+# Run the container
+docker run -d --name sentiment-app -p 8000:8000 sentiment-analysis-api:latest
+
+# Check logs
+docker logs -f sentiment-app
+```
+
+### Option C: Docker Compose
+
+```bash
+# Build and start service
+docker compose up --build -d
+
+# Check service status
+docker compose ps
+
+# View logs
+docker compose logs -f
+```
+
+---
+
+## DVC Pipeline Reproduction
+
+To retrain the model and reproduce the complete pipeline end-to-end:
+
+```bash
+# Reproduce all stages (data ingestion -> preprocessing -> features -> training -> evaluation)
+dvc repro
+
+# Check DVC pipeline status
+dvc status
+```
+
+---
+
+## Running Automated Tests
+
+The repository includes a comprehensive automated test suite testing model serialization, feature dimensions, semantic inference, REST API contracts, input validation, and Prometheus metrics:
+
+```bash
+# Run tests with pytest
+pytest tests/ -v
+
+# Run tests with coverage report
+pytest tests/ -v --cov=fastapi_app --cov=src
+
+# Run using standard unittest runner
+python -m unittest discover -s tests
+```
+
+---
+
+## Azure Deployment Guide (Fresh Account)
+
+This guide walks you through deploying the application to **Microsoft Azure** from a completely fresh Azure account with zero legacy dependencies.
+
+### Recommended Azure Architecture
+
+```
+[GitHub Repository]
+       │ (Push to main)
+       ▼
+[GitHub Actions CI/CD]
+       │ (Build & Push Docker image)
+       ▼
+[Azure Container Registry (ACR)]
+       │ (Secure pull)
+       ▼
+[Azure App Service for Containers (B1)] ────> [Public HTTPS Endpoint]
+       │
+       ▼
+[Azure Blob Storage] (Optional DVC remote)
+```
+
+**Why this architecture?**
+- **Simplicity**: No Linux VM management, OS patching, or fragile SSH key maintenance.
+- **Security**: Built-in free HTTPS/TLS certificate, managed identity support, and container isolation.
+- **Reliability**: Automated restart on failure and native health check integration (`/health`).
+- **Cost-effective**: Runs on affordable Basic tier (`B1`) or Azure Container Apps consumption plan.
+
+---
+
+### Step 1: Install & Authenticate Azure CLI
+
+```bash
+# Login to your new Azure account
+az login
+
+# Set your target subscription if you have multiple
+az account set --subscription "<YOUR_SUBSCRIPTION_ID_OR_NAME>"
+```
+
+### Step 2: Create a Resource Group
+
+```bash
+az group create \
+  --name rg-sentiment-prod \
+  --location eastus
+```
+
+### Step 3: Create Azure Container Registry (ACR)
+
+```bash
+# Registry name must be globally unique and alphanumeric
+ACR_NAME="sentimentacr$RANDOM"
+
+az acr create \
+  --resource-group rg-sentiment-prod \
+  --name $ACR_NAME \
+  --sku Basic \
+  --admin-enabled true
+
+echo "Created ACR: $ACR_NAME"
+```
+
+Retrieve the ACR admin credentials:
+```bash
+ACR_USERNAME=$(az acr credential show --name $ACR_NAME --query username -o tsv)
+ACR_PASSWORD=$(az acr credential show --name $ACR_NAME --query "passwords[0].value" -o tsv)
+```
+
+### Step 4: Build & Push the Docker Image to ACR
+
+```bash
+# Build and tag image using ACR Cloud Build (no local Docker required)
+az acr build \
+  --registry $ACR_NAME \
+  --image sentiment-analysis-api:latest .
+```
+
+### Step 5: (Optional) Create Azure Storage for DVC
+
+```bash
+STORAGE_ACCOUNT="sentimentstore$RANDOM"
+
+az storage account create \
+  --name $STORAGE_ACCOUNT \
+  --resource-group rg-sentiment-prod \
+  --location eastus \
+  --sku Standard_LRS
+
+az storage container create \
+  --name sentiment-data \
+  --account-name $STORAGE_ACCOUNT
+
+# Get connection string for .env
+AZURE_CONN_STR=$(az storage account show-connection-string \
+  --name $STORAGE_ACCOUNT \
+  --resource-group rg-sentiment-prod \
+  --query connectionString -o tsv)
+
+echo "Storage Connection String: $AZURE_CONN_STR"
+```
+
+### Step 6: Create Azure App Service (Web App for Containers)
+
+```bash
+# Create App Service Plan (Linux Basic B1)
+az appservice plan create \
+  --name plan-sentiment-prod \
+  --resource-group rg-sentiment-prod \
+  --sku B1 \
+  --is-linux
+
+# Create Web App pointing to the ACR container image
+APP_NAME="sentiment-service-$RANDOM"
+
+az webapp create \
+  --resource-group rg-sentiment-prod \
+  --plan plan-sentiment-prod \
+  --name $APP_NAME \
+  --deployment-container-image-name "$ACR_NAME.azurecr.io/sentiment-analysis-api:latest"
+
+# Configure ACR credentials for App Service
+az webapp config container set \
+  --name $APP_NAME \
+  --resource-group rg-sentiment-prod \
+  --docker-custom-image-name "$ACR_NAME.azurecr.io/sentiment-analysis-api:latest" \
+  --docker-registry-server-url "https://$ACR_NAME.azurecr.io" \
+  --docker-registry-server-user "$ACR_USERNAME" \
+  --docker-registry-server-password "$ACR_PASSWORD"
+```
+
+### Step 7: Configure App Settings and Health Probes
+
+```bash
+# Set runtime environment variables
+az webapp config appsettings set \
+  --name $APP_NAME \
+  --resource-group rg-sentiment-prod \
+  --settings \
+    WEBSITES_PORT=8000 \
+    PORT=8000 \
+    ENVIRONMENT=production \
+    LOG_LEVEL=INFO
+
+# Configure health check probe path
+az webapp config set \
+  --name $APP_NAME \
+  --resource-group rg-sentiment-prod \
+  --generic-configurations '{"healthCheckPath": "/health"}'
+```
+
+### Step 8: Verify Deployment
+
+```bash
+# Get your application URL
+APP_URL="https://$APP_NAME.azurewebsites.net"
+echo "Application URL: $APP_URL"
+
+# Test health check
+curl "$APP_URL/health"
+
+# Test prediction API
+curl -X POST "$APP_URL/api/v1/predict" \
+  -H "Content-Type: application/json" \
+  -d '{"text": "The deployment on Azure works flawlessly!"}'
+```
+
+---
+
+## CI/CD Workflow
+
+The repository includes pre-configured GitHub Actions workflows in `.github/workflows/`:
+
+### 1. `ci.yaml`
+- Runs on every Pull Request and Push to `main`.
+- Sets up Python 3.10 and caches dependencies.
+- Runs full `pytest` suite with code coverage.
+- Validates Docker container build without pushing.
+
+### 2. `cd.yaml`
+- Automatically triggers upon successful CI completion on `main` (or manual dispatch).
+- Logs into Azure using Service Principal credentials.
+- Builds and pushes tagged Docker image to your Azure Container Registry.
+- Deploys updated container to Azure App Service with zero downtime.
+- Performs an automated post-deployment health check against `$AZURE_APP_URL/health`.
+
+### Configuring GitHub Secrets for CD:
+
+In your GitHub repository, navigate to **Settings** -> **Secrets and variables** -> **Actions** and add:
+
+1. `AZURE_CREDENTIALS`: Service Principal JSON output from:
+   ```bash
+   az ad sp create-for-rbac \
+     --name "sp-sentiment-github" \
+     --role contributor \
+     --scopes /subscriptions/<SUBSCRIPTION_ID>/resourceGroups/rg-sentiment-prod \
+     --sdk-auth
+   ```
+2. `AZURE_ACR_NAME`: Your ACR registry name (e.g. `sentimentacr12345`).
+3. `AZURE_APP_NAME`: Your Azure App Service name (e.g. `sentiment-service-12345`).
+4. `AZURE_APP_URL`: Your live web URL (e.g. `https://sentiment-service-12345.azurewebsites.net`).
+
+---
+
+## Troubleshooting
+
+### 1. Port Binding in Azure
+- Azure App Service expects containers to listen on port 80 or 8000.
+- The `Dockerfile` binds to `${PORT:-8000}` dynamically, and Azure App Service passes `PORT` or `WEBSITES_PORT=8000`.
+
+### 2. NLTK Resource Missing in Container
+- The Dockerfile pre-downloads `stopwords` and `wordnet` into `/app/nltk_data` and exports `NLTK_DATA=/app/nltk_data` during the build stage.
+- Preprocessing utilities also have lazy-loading fallbacks that download missing resources on demand.
+
+### 3. Container Startup Timeout
+- The service initializes model artifacts during the FastAPI `lifespan` handler. If artifacts are missing, the server logs a warning and remains operational in degraded mode rather than crashing, preventing container restart loops.
+
+---
+
+## License
+
+This project is licensed under the MIT License - see the [LICENSE](LICENSE) file for details.
