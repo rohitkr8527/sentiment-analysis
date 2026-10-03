@@ -67,27 +67,6 @@
             font-size: 1.05rem;
         }
 
-        .badges {
-            display: flex;
-            justify-content: center;
-            gap: 12px;
-            margin-top: 14px;
-        }
-
-        .badge {
-            font-size: 0.8rem;
-            font-weight: 600;
-            padding: 4px 10px;
-            border-radius: 9999px;
-            background: #eff6ff;
-            color: var(--primary);
-            border: 1px solid #bfdbfe;
-            text-decoration: none;
-        }
-
-        .badge:hover {
-            background: #dbeafe;
-        }
 
         form {
             display: flex;
@@ -202,22 +181,6 @@
             background: rgba(255, 255, 255, 0.7);
         }
 
-        footer {
-            margin-top: auto;
-            text-align: center;
-            padding: 24px;
-            color: var(--text-muted);
-            font-size: 0.9rem;
-        }
-
-        footer a {
-            color: var(--primary);
-            text-decoration: none;
-        }
-
-        footer a:hover {
-            text-decoration: underline;
-        }
 
         @keyframes fadeIn {
             from { opacity: 0; transform: translateY(-8px); }
@@ -230,11 +193,6 @@
         <header>
             <h1>Sentiment Analysis Service</h1>
             <p>Classify user sentiment with high-speed TF-IDF and Logistic Regression</p>
-            <div class="badges">
-                <a href="/docs" class="badge">Swagger API Docs</a>
-                <a href="/health" class="badge">Health Probe</a>
-                <a href="/metrics" class="badge">Prometheus Metrics</a>
-            </div>
         </header>
 
         <main>
@@ -275,9 +233,5 @@
             {% endif %}
         </main>
     </div>
-
-    <footer>
-        Production-Ready Sentiment Analysis Pipeline &bull; Deployed on Microsoft Azure &bull; <a href="/docs">REST API Documentation</a>
-    </footer>
 </body>
 </html>
