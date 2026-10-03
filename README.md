@@ -8,7 +8,7 @@
 [![FastAPI](https://img.shields.io/badge/FastAPI-009688?logo=fastapi&logoColor=white)](https://fastapi.tiangolo.com/)
 [![scikit-learn](https://img.shields.io/badge/scikit--learn-F7931E?logo=scikitlearn&logoColor=white)](https://scikit-learn.org/)
 [![DVC](https://img.shields.io/badge/DVC-945DD6?logo=dvc&logoColor=white)](https://dvc.org/)
-[![MLflow](https://img.shields.io/badge/MLflow-0194E2?logo=mlflow&logoColor=white)](https://mlflow.org/)
+[![MLflow](https://img.shields.io/badge/MLflow-0194E2?logo=mlflow&logoColor=white)](https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow/#/)
 [![Docker](https://img.shields.io/badge/Docker-2496ED?logo=docker&logoColor=white)](https://www.docker.com/)
 [![Azure](https://img.shields.io/badge/Azure-0078D4?logo=microsoftazure&logoColor=white)](https://azure.microsoft.com/)
 [![GitHub Actions](https://img.shields.io/badge/CI%2FCD-GitHub%20Actions-2088FF?logo=githubactions&logoColor=white)](.github/workflows)
@@ -231,6 +231,15 @@ flowchart LR
 dvc repro      # run only the stages whose deps/params changed
 dvc status
 ```
+
+### Experiment Tracking
+
+All runs (parameters, metrics, artifacts and registered models) are logged to MLflow hosted on DagsHub:
+
+**[dagshub.com/rohitkr8527/sentiment-analysis.mlflow](https://dagshub.com/rohitkr8527/sentiment-analysis.mlflow/#/)**
+
+The five notebooks in [`notebooks/`](notebooks) (BoW vs TF-IDF, vectorizer comparison, hyperparameter tuning) point to this tracking server by default. Override it with the `MLFLOW_TRACKING_URI` environment variable, or set `DAGSHUB_REPO_OWNER` / `DAGSHUB_REPO_NAME` / `DAGSHUB_TOKEN` (see [Configuration](#configuration)).
+
 
 ---
 
