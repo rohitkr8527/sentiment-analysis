@@ -120,17 +120,32 @@ class SentimentPredictor:
             self.model_version = latest_version
             model_uri = f"models:/{model_name}/{latest_version}"
             logger.info("Loading model from MLflow URI: %s", model_uri)
-            self.model = mlflow.pyfunc.load_model(model_uri)
 
-            # Vectorizer is still needed
+            try:
+                import mlflow.sklearn
+                self.model = mlflow.sklearn.load_model(model_uri)
+            except Exception:
+                self.model = mlflow.pyfunc.load_model(model_uri)
+
+            # Ensure backward and forward compatibility across scikit-learn versions
+            if hasattr(self.model, "__dict__") and not hasattr(self.model, "multi_class"):
+                self.model.multi_class = "auto"
+
+            # Vectorizer resolution: local first, then MLflow artifact fallback
             vec_path = settings.resolve_path(settings.VECTORIZER_PATH)
             if os.path.exists(vec_path):
                 with open(vec_path, "rb") as f:
                     self.vectorizer = pickle.load(f)
                 return True
             else:
-                logger.warning("MLflow model loaded, but local vectorizer not found at %s", vec_path)
-                return False
+                try:
+                    downloaded_path = client.download_artifacts(run_id=versions[0].run_id, path="tfidf_vectorizer.pkl")
+                    with open(downloaded_path, "rb") as f:
+                        self.vectorizer = pickle.load(f)
+                    return True
+                except Exception as ve:
+                    logger.warning("MLflow model loaded, but vectorizer could not be resolved: %s", ve)
+                    return False
 
         except Exception as e:
             logger.error("Failed loading model from MLflow: %s", e)

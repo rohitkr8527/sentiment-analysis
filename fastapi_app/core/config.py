@@ -33,9 +33,9 @@ class Settings:
     # Optional MLflow / DagsHub remote configuration
     USE_MLFLOW_MODEL: bool = os.getenv("USE_MLFLOW_MODEL", "false").lower() in ("true", "1", "yes")
     DAGSHUB_TOKEN: str = os.getenv("DAGSHUB_TOKEN") or os.getenv("sentiment_analysis", "")
-    DAGSHUB_REPO_OWNER: str = os.getenv("DAGSHUB_REPO_OWNER", "")
+    DAGSHUB_REPO_OWNER: str = os.getenv("DAGSHUB_REPO_OWNER", "rohitkr8527")
     DAGSHUB_REPO_NAME: str = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
-    MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI", "")
+    MLFLOW_TRACKING_URI: str = os.getenv("MLFLOW_TRACKING_URI") or f"https://dagshub.com/{os.getenv('DAGSHUB_REPO_OWNER', 'rohitkr8527')}/{os.getenv('DAGSHUB_REPO_NAME', 'sentiment-analysis')}.mlflow"
     MLFLOW_MODEL_NAME: str = os.getenv("MLFLOW_MODEL_NAME", "my_model")
     MLFLOW_MODEL_STAGE: str = os.getenv("MLFLOW_MODEL_STAGE", "Production")
 

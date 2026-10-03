@@ -12,26 +12,22 @@ load_dotenv()
 def setup_mlflow():
     """Configure MLflow credentials if available."""
     token = os.getenv("DAGSHUB_TOKEN") or os.getenv("sentiment_analysis")
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
-
-    if not tracking_uri:
-        repo_owner = os.getenv("DAGSHUB_REPO_OWNER")
-        repo_name = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
-        if repo_owner:
-            tracking_uri = f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
+    repo_owner = os.getenv("DAGSHUB_REPO_OWNER", "rohitkr8527")
+    repo_name = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI") or f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
 
     if token:
         os.environ["MLFLOW_TRACKING_USERNAME"] = token
         os.environ["MLFLOW_TRACKING_PASSWORD"] = token
-
-    if tracking_uri:
         try:
             import mlflow
             mlflow.set_tracking_uri(tracking_uri)
+            logger.info("MLflow tracking configured for DagsHub: %s", tracking_uri)
             return True, tracking_uri
         except Exception as e:
             logger.warning("Failed to configure MLflow tracking URI: %s", e)
 
+    logger.info("DAGSHUB_TOKEN / sentiment_analysis not configured; skipping remote model registration.")
     return False, ""
 
 

@@ -11,16 +11,13 @@ def promote_model() -> bool:
     Archives previously active Production models.
     """
     token = os.getenv("DAGSHUB_TOKEN") or os.getenv("sentiment_analysis")
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
-    repo_owner = os.getenv("DAGSHUB_REPO_OWNER")
+    repo_owner = os.getenv("DAGSHUB_REPO_OWNER", "rohitkr8527")
     repo_name = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI") or f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
     model_name = os.getenv("MLFLOW_MODEL_NAME", "my_model")
 
-    if not tracking_uri and repo_owner:
-        tracking_uri = f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
-
-    if not tracking_uri or not token:
-        print("[WARNING] MLFLOW_TRACKING_URI and DAGSHUB_TOKEN are not configured; skipping model promotion.")
+    if not token:
+        print("[WARNING] DAGSHUB_TOKEN / sentiment_analysis is not configured; skipping model promotion.")
         return False
 
     os.environ["MLFLOW_TRACKING_USERNAME"] = token

@@ -20,28 +20,22 @@ def setup_mlflow() -> Tuple[bool, str]:
     Returns (is_configured, tracking_uri).
     """
     token = os.getenv("DAGSHUB_TOKEN") or os.getenv("sentiment_analysis")
-    tracking_uri = os.getenv("MLFLOW_TRACKING_URI")
-
-    if not tracking_uri:
-        repo_owner = os.getenv("DAGSHUB_REPO_OWNER")
-        repo_name = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
-        if repo_owner:
-            tracking_uri = f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
+    repo_owner = os.getenv("DAGSHUB_REPO_OWNER", "rohitkr8527")
+    repo_name = os.getenv("DAGSHUB_REPO_NAME", "sentiment-analysis")
+    tracking_uri = os.getenv("MLFLOW_TRACKING_URI") or f"https://dagshub.com/{repo_owner}/{repo_name}.mlflow"
 
     if token:
         os.environ["MLFLOW_TRACKING_USERNAME"] = token
         os.environ["MLFLOW_TRACKING_PASSWORD"] = token
-
-    if tracking_uri:
         try:
             import mlflow
             mlflow.set_tracking_uri(tracking_uri)
-            logger.info("MLflow tracking URI configured: %s", tracking_uri)
+            logger.info("MLflow tracking configured for DagsHub: %s", tracking_uri)
             return True, tracking_uri
         except Exception as e:
             logger.warning("Could not set up MLflow tracking URI: %s", e)
 
-    logger.info("MLflow remote tracking not configured; proceeding with local metrics generation.")
+    logger.info("DAGSHUB_TOKEN / sentiment_analysis not configured; proceeding with local metrics generation.")
     return False, ""
 
 
@@ -154,6 +148,8 @@ def main():
 
                 mlflow.sklearn.log_model(clf, "model")
                 mlflow.log_artifact("reports/metrics.json")
+                if os.path.exists("models/tfidf_vectorizer.pkl"):
+                    mlflow.log_artifact("models/tfidf_vectorizer.pkl")
                 logger.info("Logged model and metrics to MLflow run: %s", run_id)
 
         save_experiment_info(
