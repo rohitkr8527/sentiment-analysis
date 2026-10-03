@@ -74,6 +74,10 @@ class SentimentPredictor:
             with open(model_path, "rb") as f:
                 self.model = pickle.load(f)
 
+            # Ensure backward and forward compatibility across scikit-learn versions
+            if hasattr(self.model, "__dict__") and not hasattr(self.model, "multi_class"):
+                self.model.multi_class = "auto"
+
             logger.info("Successfully loaded local model and vectorizer artifacts.")
             return True
         except Exception as e:
@@ -154,7 +158,14 @@ class SentimentPredictor:
 
         # Support both standard scikit-learn models and MLflow PyFunc wrappers
         if hasattr(self.model, "predict_proba"):
-            probs = self.model.predict_proba(features)[0]
+            try:
+                probs = self.model.predict_proba(features)[0]
+            except AttributeError as ae:
+                if "multi_class" in str(ae):
+                    self.model.multi_class = "auto"
+                    probs = self.model.predict_proba(features)[0]
+                else:
+                    raise
             label = int(np.argmax(probs))
             confidence = float(probs[label])
         else:

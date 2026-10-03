@@ -81,6 +81,9 @@ def train_classifier(X_train: Any, y_train: np.ndarray, params: Dict[str, Any]) 
         n_jobs=-1
     )
     clf.fit(X_train, y_train)
+    # Ensure backward/forward compatibility across scikit-learn versions
+    if not hasattr(clf, "multi_class"):
+        clf.multi_class = "auto"
     logger.info("Model training completed successfully.")
     return clf
 
